@@ -115,7 +115,7 @@
   <section class="card limits">
     <h2>Honest limits — read before judging</h2>
     <ul>
-      <li><strong>This page is a simulation.</strong> No template has been published to Esmeralda or mainnet, and no on-chain state exists. The simulation mirrors the template rules and is parity-tested (<code>node --test app/sim.test.mjs</code>); the template rules are proven against the real engine (<code>cargo test</code>, 12 tests).</li>
+      <li><strong>This page is a simulation.</strong> No template has been published to Esmeralda or mainnet, and no on-chain state exists. The simulation mirrors the template rules and is parity-tested (<code>node --test app/sim.test.mjs</code>); the template rules are proven against the real engine (<code>cargo test</code>, 15 tests).</li>
       <li><strong>Pledge amounts are public.</strong> Vault-based accounting means anyone can read who pledged how much. That is a deliberate v1 design choice, not an oversight. Hiding amounts would need a confidential/stealth design and is out of scope.</li>
       <li><strong>No partial refunds, no milestones, no platform fee.</strong> All-or-nothing, one claim, full refunds. Stretch ideas are listed in the README, not claimed here.</li>
       <li><strong>Live mode is not wired up.</strong> The section below detects a Tari wallet but cannot transact: no template address is published, so there is nothing to call. It will honestly say so. Never trust a demo that claims a live path it cannot show.</li>
