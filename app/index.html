@@ -5,67 +5,110 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ootle Crowdfund — all-or-nothing crowdfunding (simulation demo)</title>
 <meta name="description" content="All-or-nothing crowdfunding on Tari Ootle: goal met, the creator claims; goal missed, every backer refunds in full. Walletless browser simulation of the real Rust template.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%236d28d9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='24' fill='url(%23g)'/%3E%3Ctext x='50' y='74' font-size='60' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='800'%3ET%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23a83c1e'/%3E%3Ctext x='50' y='72' font-size='58' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='800'%3ET%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="hero">
-  <div class="hero-top">
-    <div class="logo" aria-hidden="true">
-      <svg viewBox="0 0 56 56" width="56" height="56">
-        <defs>
-          <linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#a78bfa"/>
-            <stop offset="1" stop-color="#6d28d9"/>
-          </linearGradient>
-        </defs>
-        <rect width="56" height="56" rx="15" fill="url(#logo-g)"/>
-        <text x="28" y="41" font-size="33" text-anchor="middle" fill="#fff" font-family="system-ui, sans-serif" font-weight="800">T</text>
-      </svg>
-    </div>
-    <p class="badge">SIMULATION — no wallet, no network, no real funds</p>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <p class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="30" height="30">
+          <rect width="32" height="32" rx="8" fill="#a83c1e"/>
+          <text x="16" y="23" font-size="19" text-anchor="middle" fill="#fff" font-family="system-ui, sans-serif" font-weight="800">T</text>
+        </svg>
+      </span>
+      Ootle Crowdfund
+    </p>
+    <p class="topbar-note">Simulation · no wallet · no real funds</p>
   </div>
-  <h1>Ootle Crowdfund</h1>
-  <p class="lede">All-or-nothing crowdfunding. A creator sets a goal and an epoch deadline.
-  Backers pledge TARI into a vault. Goal met by the deadline → the creator claims it all.
-  Goal missed → every backer refunds in full. No platform cut, no custody beyond the template.</p>
-  <div class="flow" aria-label="How a campaign settles">
-    <div class="flow-node">
-      <span class="flow-num">1</span>
-      <p><strong>Pledge</strong><span>TARI goes into the vault</span></p>
-    </div>
-    <span class="flow-arrow" aria-hidden="true">→</span>
-    <div class="flow-node">
-      <span class="flow-num">2</span>
-      <p><strong>Deadline</strong><span>Epochs settle the campaign</span></p>
-    </div>
-    <span class="flow-arrow" aria-hidden="true">→</span>
-    <div class="flow-node">
-      <span class="flow-num">3</span>
-      <p><strong>Claim or refund</strong><span>Goal met: creator claims · Goal missed: full refunds</span></p>
-    </div>
-  </div>
-  <ul class="chips" aria-label="Verification status">
-    <li><strong>15/15</strong> engine tests</li>
-    <li><strong>14/14</strong> parity tests</li>
-    <li><strong>0</strong> real funds</li>
-    <li><strong>MIT</strong> licensed</li>
-  </ul>
-  <p class="lede small">This page runs a faithful in-browser simulation of the
-  <code>CrowdfundCampaign</code> Rust template — same rules, same rejection messages.
-  The template itself is tested against the real Ootle engine (<code>cargo test</code>).
-  Nothing here touches a network or a wallet.</p>
 </header>
 
-<main>
-  <section class="card walkthrough" id="walkthrough">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">Guided demo</p>
-        <h2>Judge walkthrough <span class="muted">(~2 minutes)</span></h2>
+<main class="wrap">
+  <section class="intro">
+    <h1>All-or-nothing crowdfunding.</h1>
+    <p class="lede">A creator sets a goal and an epoch deadline. Backers pledge TARI into a vault.
+    Goal met by the deadline → the creator claims it all. Goal missed → every backer refunds
+    in full. No platform cut, no custody beyond the template.</p>
+    <p class="lede-note">This page runs a faithful in-browser simulation of the
+    <code>CrowdfundCampaign</code> Rust template — same rules, same rejection messages.
+    Nothing here touches a network or a wallet.</p>
+    <p class="proof"><strong>15 of 15</strong> engine tests pass against the real Ootle engine
+    · <strong>14 of 14</strong> parity checks match the template · <strong>MIT</strong> licensed</p>
+  </section>
+
+  <section class="card workspace" aria-label="Demo controls">
+    <div class="ws-group">
+      <p class="ws-label">Acting as <span class="ws-hint">The transaction signer</span></p>
+      <div class="row persona-row" role="group" aria-label="Active persona">
+        <button type="button" class="persona-btn" data-persona="rani"><span class="avatar" aria-hidden="true">R</span><span class="persona-label">Rani<small>creator</small></span></button>
+        <button type="button" class="persona-btn" data-persona="bima"><span class="avatar" aria-hidden="true">B</span><span class="persona-label">Bima<small>backer</small></span></button>
+        <button type="button" class="persona-btn" data-persona="sari"><span class="avatar" aria-hidden="true">S</span><span class="persona-label">Sari<small>backer</small></span></button>
       </div>
-      <p class="steps-progress"><span id="walkthrough-count">0 / 9</span> steps complete</p>
     </div>
+    <div class="ws-group">
+      <p class="ws-label">Wallets <span class="ws-hint">Demo units, not real TARI</span></p>
+      <ul class="wallets">
+        <li><span class="wallet-name">Rani</span><strong id="balance-rani">10,000</strong></li>
+        <li><span class="wallet-name">Bima</span><strong id="balance-bima">10,000</strong></li>
+        <li><span class="wallet-name">Sari</span><strong id="balance-sari">10,000</strong></li>
+      </ul>
+    </div>
+    <div class="ws-group">
+      <p class="ws-label">Epoch</p>
+      <p class="epoch-line"><strong id="epoch-display">0</strong><span class="muted"> / deadline epoch 5</span></p>
+      <div class="row epoch-actions">
+        <button id="epoch-plus-1" type="button">Advance +1 epoch</button>
+        <button id="epoch-to-deadline" type="button">Jump to epoch 5</button>
+      </div>
+      <p class="muted small ws-note">On Ootle mainnet an epoch is ~20 minutes. Here you control time so the deadline story fits in two minutes.</p>
+    </div>
+    <div class="ws-group ws-reset">
+      <button id="reset-demo" type="button">Reset demo</button>
+      <p class="muted small ws-note">Restores both campaigns, all wallets, epoch 0, and the walkthrough checklist.</p>
+    </div>
+  </section>
+
+  <section class="campaigns-section">
+    <div class="section-head">
+      <h2>Campaigns</h2>
+      <p class="muted">Two seeded campaigns — one will fund, one will miss.</p>
+    </div>
+    <div id="campaigns" class="campaign-grid"></div>
+  </section>
+
+  <section class="card create">
+    <h2>Create a campaign</h2>
+    <form id="create-form">
+      <label class="field-title">Title
+        <input id="new-title" type="text" maxlength="120" required placeholder="e.g. Fund the next open-source release">
+      </label>
+      <label>Goal (TARI)
+        <input id="new-goal" type="text" inputmode="numeric" required placeholder="e.g. 1000">
+      </label>
+      <label>Deadline (epochs)
+        <input id="new-deadline" type="number" min="1" max="1000" value="5" required>
+      </label>
+      <button type="submit" class="btn-primary">Create campaign</button>
+    </form>
+    <p class="muted small">The creator is the active persona. The goal must be a whole number and the deadline in the future — the template rejects anything else.</p>
+    <p id="create-error" class="error" role="alert" hidden></p>
+  </section>
+
+  <section class="card log-card">
+    <div class="section-head">
+      <h2>Activity log</h2>
+      <button id="clear-log" type="button">Clear log</button>
+    </div>
+    <p class="muted small">Every click, mapped to the template call it mirrors.</p>
+    <ol id="log" class="log" aria-live="polite"></ol>
+  </section>
+
+  <details class="card disclosure" id="walkthrough">
+    <summary>
+      <span class="summary-title">Guided walkthrough <span class="muted">— about 2 minutes</span></span>
+      <span class="steps-progress"><span id="walkthrough-count">0 / 9</span> steps complete</span>
+    </summary>
     <p>Follow the steps. Each one ticks itself off as you do it. Rejections are part of the demo —
     they prove the template says <em>no</em> exactly when it should.</p>
     <ol class="steps">
@@ -80,85 +123,9 @@
       <li data-step="refund-after-success">Try refunding <em>Community radio</em> — it must be <em>rejected</em> (refunds closed after success).</li>
     </ol>
     <p class="muted small">Tip: switch the active persona with the “Acting as” control. The active persona is the transaction signer — the template checks it on every call.</p>
-  </section>
+  </details>
 
-  <section class="card controls">
-    <div class="panel">
-      <p class="eyebrow">Time</p>
-      <h2>Current epoch</h2>
-      <p class="epoch-big"><strong id="epoch-display">0</strong><span class="muted"> / deadline epoch 5</span></p>
-      <div class="row">
-        <button id="epoch-plus-1" type="button" class="btn-primary">Advance +1 epoch</button>
-        <button id="epoch-to-deadline" type="button">Jump to epoch 5</button>
-      </div>
-      <p class="muted small">On Ootle mainnet an epoch is ~20 minutes. Here you control time so the deadline story fits in two minutes.</p>
-    </div>
-    <div class="panel">
-      <p class="eyebrow">Transaction signer</p>
-      <h2>Acting as</h2>
-      <div class="row persona-row" role="group" aria-label="Active persona">
-        <button type="button" class="persona-btn" data-persona="rani"><span class="avatar" aria-hidden="true">R</span><span class="persona-label">Rani<small>creator</small></span></button>
-        <button type="button" class="persona-btn" data-persona="bima"><span class="avatar" aria-hidden="true">B</span><span class="persona-label">Bima<small>backer</small></span></button>
-        <button type="button" class="persona-btn" data-persona="sari"><span class="avatar" aria-hidden="true">S</span><span class="persona-label">Sari<small>backer</small></span></button>
-      </div>
-      <h2 class="wallets-title">Wallets <span class="muted">(demo units, not real TARI)</span></h2>
-      <ul class="wallets">
-        <li><span class="wallet-name">Rani</span><strong id="balance-rani">10,000</strong></li>
-        <li><span class="wallet-name">Bima</span><strong id="balance-bima">10,000</strong></li>
-        <li><span class="wallet-name">Sari</span><strong id="balance-sari">10,000</strong></li>
-      </ul>
-    </div>
-    <div class="panel">
-      <p class="eyebrow">Demo</p>
-      <h2>Start over</h2>
-      <button id="reset-demo" type="button">Reset demo</button>
-      <p class="muted small">Restores both campaigns, all wallets, epoch 0, and the walkthrough checklist.</p>
-    </div>
-  </section>
-
-  <section class="campaigns-section">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">Live simulation</p>
-        <h2>Campaigns</h2>
-      </div>
-      <p class="muted small">Two seeded campaigns — one will fund, one will miss.</p>
-    </div>
-    <div id="campaigns" class="campaign-grid"></div>
-  </section>
-
-  <section class="card">
-    <p class="eyebrow">New campaign</p>
-    <h2>Create a campaign</h2>
-    <form id="create-form">
-      <label class="field-wide">Title
-        <input id="new-title" type="text" maxlength="120" required placeholder="e.g. Fund the next open-source release">
-      </label>
-      <label>Goal (TARI units, whole number)
-        <input id="new-goal" type="text" inputmode="numeric" required placeholder="e.g. 1000">
-      </label>
-      <label>Deadline (epochs from now)
-        <input id="new-deadline" type="number" min="1" max="1000" value="5" required>
-      </label>
-      <button type="submit" class="btn-primary">Create campaign</button>
-    </form>
-    <p class="muted small">The creator is the active persona. The deadline must be in the future — the template rejects anything else.</p>
-    <p id="create-error" class="error" role="alert" hidden></p>
-  </section>
-
-  <section class="card">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">Trace</p>
-        <h2>Activity log <span class="muted">— every click, mapped to the template call it mirrors</span></h2>
-      </div>
-      <button id="clear-log" type="button">Clear log</button>
-    </div>
-    <ol id="log" class="log" aria-live="polite"></ol>
-  </section>
-
-  <section class="card">
-    <p class="eyebrow">Template mechanics</p>
+  <section class="how">
     <h2>How it works</h2>
     <ul class="features">
       <li><strong>One campaign = one component.</strong> <code>new(title, goal, deadline_epoch)</code> opens it; the caller becomes the creator.</li>
@@ -170,9 +137,11 @@
     </ul>
   </section>
 
-  <section class="card limits">
-    <p class="eyebrow eyebrow-amber">Read before judging</p>
-    <h2>Honest limits</h2>
+  <details class="card disclosure limits" id="limits">
+    <summary>
+      <span class="summary-title">Honest limits</span>
+      <span class="muted small">Read before judging</span>
+    </summary>
     <ul>
       <li><strong>This page is a simulation.</strong> No template has been published to Esmeralda or mainnet, and no on-chain state exists. The simulation mirrors the template rules and is parity-tested (<code>node --test app/sim.test.mjs</code>); the template rules are proven against the real engine (<code>cargo test</code>, 15 tests).</li>
       <li><strong>Pledge amounts are public.</strong> Vault-based accounting means anyone can read who pledged how much. That is a deliberate v1 design choice, not an oversight. Hiding amounts would need a confidential/stealth design and is out of scope.</li>
@@ -180,11 +149,10 @@
       <li><strong>Live mode is not wired up.</strong> The section below detects a Tari wallet but cannot transact: no template address is published, so there is nothing to call. It will honestly say so. Never trust a demo that claims a live path it cannot show.</li>
       <li><strong>Epochs are coarse on real networks</strong> (~20 min mainnet, ~1 h Esmeralda), so real campaigns run for days, not minutes. The demo's epoch control exists only to make the story judgeable in two minutes.</li>
     </ul>
-  </section>
+  </details>
 
-  <section class="card live" id="live">
-    <p class="eyebrow">Optional · not verified · stub</p>
-    <h2>Live mode <span class="badge small">STUB</span></h2>
+  <section class="live" id="live">
+    <h2>Live mode <span class="muted small">— stub, detection only</span></h2>
     <p id="live-status">Checking for a Tari wallet…</p>
     <p class="muted small">What live mode would need: a published template address on Esmeralda/mainnet, the
     <code>window.tari</code> provider (Sapient extension or Tari Universe web wallet), and indexer reads for

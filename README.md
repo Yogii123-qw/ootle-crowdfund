@@ -160,15 +160,19 @@ clean
 
 The demo page was also served locally (`python3 -m http.server`) and exercised
 end-to-end in headless Chromium with real clicks through the full 9-step
-walkthrough — 80 assertions covering step tracking and the progress counter,
+walkthrough — 88 assertions covering step tracking and the progress counter,
 exact rejection messages, wallet balances, the disabled time-travel button,
 reset, the never-pledged refund precision case, the create-campaign form
-(including its zero-goal rejection), pledge input validation, status-pill
-states, progress-bar values, and layout checks (no horizontal overflow,
+(including its zero-goal rejection), pledge input validation, status-dot
+states, progress-bar values, the app-first section order, the collapsible
+walkthrough/limits sections, and layout checks (no horizontal overflow,
 card stacking, tap-target sizes) — in desktop (1280px) and mobile (390px)
-viewports, with zero console/page errors. All assertions passed. The UI was
-redesigned 2026-11-15 (same rules, same copy, same hooks); the harness was
-re-run against the redesigned bytes.
+viewports, with zero console/page errors. All assertions passed. A separate
+contrast check verified 20 text/background pairs from the shipped CSS
+against WCAG AA (all ≥ 4.5:1). The UI was redesigned twice on 2026-11-15
+(same rules, same copy, same hooks; the second pass is an original light
+identity — bright paper, rust accent, grotesque display type); the harness
+was re-run against the redesigned bytes.
 
 ## Project structure
 
