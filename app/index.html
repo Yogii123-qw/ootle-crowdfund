@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ootle Crowdfund — all-or-nothing crowdfunding (simulation demo)</title>
-<meta name="description" content="All-or-nothing crowdfunding on Tari Ootle: goal met, the creator claims; goal missed, every backer refunds in full. Walletless browser simulation of the real Rust template.">
+<meta name="description" content="All-or-nothing crowdfunding on Tari Ootle: goal met, funds release in three stages that backers can veto; goal missed, every backer refunds in full. Walletless browser simulation of the real Rust template.">
 <meta name="theme-color" content="#160c25">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Ootle Crowdfund — all-or-nothing crowdfunding on Tari Ootle">
-<meta property="og:description" content="Goal met, the creator claims. Goal missed, every backer refunds in full. Walletless browser simulation of the real Rust template.">
+<meta property="og:description" content="Goal met, funds release in three stages that backers can veto. Goal missed, every backer refunds in full. Walletless browser simulation of the real Rust template.">
 <meta property="og:url" content="https://yogii123-qw.github.io/ootle-crowdfund/">
 <meta name="twitter:card" content="summary">
 <link rel="canonical" href="https://yogii123-qw.github.io/ootle-crowdfund/">
@@ -72,7 +72,7 @@
   <noscript><p class="noscript">This demo needs JavaScript: the simulation, wallets, and walkthrough all run in your browser. Nothing is sent anywhere.</p></noscript>
   <section class="intro">
     <h1><span class="accent-word">All-or-nothing</span> crowdfunding.</h1>
-    <p class="lede">Goal met by the deadline, the creator claims it all. Goal missed, every backer refunds in full.</p>
+    <p class="lede">Goal met, funds release in three stages that backers can veto; goal missed, every backer refunds in full.</p>
   </section>
 
   <nav class="entry-cards" aria-label="Choose your path">
@@ -86,7 +86,7 @@
     </button>
     <button type="button" class="entry-card" data-path="tour">
       <span class="entry-title">Follow the guided tour <span class="entry-arrow" aria-hidden="true">→</span></span>
-      <span class="entry-sub">Nine steps through every rule.</span>
+      <span class="entry-sub">Sixteen steps through every rule.</span>
     </button>
   </nav>
 
@@ -102,7 +102,7 @@
     <div class="ws-group">
       <p class="ws-label">Wallets</p>
       <ul class="wallets">
-        <li><span class="wallet-name">Rani</span><strong id="balance-rani">10,000</strong></li>
+        <li><span class="wallet-name">Rani</span><strong id="balance-rani">9,400</strong></li>
         <li><span class="wallet-name">Bima</span><strong id="balance-bima">10,000</strong></li>
         <li><span class="wallet-name">Sari</span><strong id="balance-sari">10,000</strong></li>
       </ul>
@@ -113,6 +113,7 @@
       <div class="row epoch-actions">
         <button id="epoch-plus-1" type="button">Advance +1 epoch</button>
         <button id="epoch-to-deadline" type="button">Jump to epoch 5</button>
+        <button id="epoch-plus-72" type="button">Jump +72 (next window)</button>
       </div>
     </div>
     <div class="ws-group ws-reset">
@@ -139,7 +140,11 @@
       <label>Deadline (epochs)
         <input id="new-deadline" type="number" min="1" max="1000" value="5" required>
       </label>
+      <label class="field-promise">Promise to backers
+        <input id="new-promise" type="text" maxlength="280" required placeholder="e.g. Your name in the credits + early access">
+      </label>
       <button type="submit" class="btn-primary">Create campaign</button>
+      <p id="bond-hint" class="bond-hint" hidden></p>
       <p id="goal-hint" class="goal-hint" hidden></p>
     </form>
     <p id="create-error" class="error" role="alert" hidden></p>
@@ -166,11 +171,14 @@
 
     <h3>How it works</h3>
     <ul class="detail-list how-grid">
-      <li><strong>One campaign = one component.</strong> <code>new(title, goal, deadline_epoch)</code> opens it; the caller becomes the creator.</li>
+      <li><strong>One campaign = one component.</strong> <code>new(title, promise, goal, deadline_epoch, bond)</code> opens it; the caller becomes the creator and locks a bond of <code>max(goal / 10, 100)</code> in its own vault.</li>
+      <li><strong>Promise on the record.</strong> The creator's promise — what backers get — is stored on-chain and shown on the card, labeled as the creator's promise. The template does not enforce it; the bond and the veto are the enforcement.</li>
       <li><strong>Escrow vault.</strong> <code>pledge(bucket)</code> deposits TARI into the campaign vault and records the backer in a ledger. Pledges accumulate; overfunding is allowed.</li>
-      <li><strong>Epoch deadline.</strong> Pledges are accepted while <code>current_epoch &lt; deadline_epoch</code>. At <code>current_epoch &gt;= deadline_epoch</code> the campaign settles — the boundary is tested both ways.</li>
-      <li><strong>Exactly one outcome.</strong> Goal met → <code>claim()</code> pays the whole vault to the creator, once. Goal missed → <code>refund()</code> repays each backer in full, once. The other path is rejected with a specific message.</li>
-      <li><strong>Events.</strong> <code>CampaignCreated</code>, <code>Pledged</code>, <code>Funded</code> (once, when the goal is first reached), <code>Claimed</code>, <code>Refunded</code> — indexable by explorers.</li>
+      <li><strong>Epoch deadline.</strong> Pledges are accepted while <code>current_epoch &lt; deadline_epoch</code>. At <code>current_epoch &gt;= deadline_epoch</code> the campaign settles — the boundary is tested both ways. Funding stays all-or-nothing: goal missed → every backer refunds in full, once.</li>
+      <li><strong>Staged release.</strong> Goal met → <code>claim()</code> pays one tranche per call: three equal thirds of the total pledged, at gates <code>deadline + 0, 72, 144</code> epochs. No single release dominates.</li>
+      <li><strong>Backer veto.</strong> From the deadline until each release, any backer may <code>veto()</code>. Votes are pledge-weighted; strictly more than half freezes the rest, and refunds pay pro-rata shares of what remains plus shares of the forfeited bond. The tally resets on each release.</li>
+      <li><strong>Abandonment.</strong> If the creator claims nothing for 72 epochs past a gate, anyone may call <code>abandon()</code> — same refund path as a veto, bond included.</li>
+      <li><strong>Events.</strong> <code>CampaignCreated</code>, <code>Pledged</code>, <code>Funded</code> (once, when the goal is first reached), <code>TrancheReleased</code>, <code>CampaignCompleted</code>, <code>VetoCast</code>, <code>VetoSucceeded</code>, <code>Abandoned</code>, <code>BondForfeited</code>, <code>BondReturned</code>, <code>Refunded</code> — indexable by explorers.</li>
       <li><strong>Access rules.</strong> Methods are callable by anyone; authorization is enforced in code by comparing the transaction signer to the recorded creator/pledge keys. The template creates no resource, so there are no owner-bypassable resource rules.</li>
     </ul>
 
@@ -191,19 +199,19 @@
     </div>
     <div class="proof-grid">
       <div class="proof-card">
-        <p class="proof-num">15 / 15</p>
+        <p class="proof-num">52 / 52</p>
         <p class="proof-label">engine tests</p>
         <p class="proof-sub muted small">Real Ootle engine, in-process</p>
       </div>
       <div class="proof-card">
-        <p class="proof-num">14 / 14</p>
+        <p class="proof-num">46 / 46</p>
         <p class="proof-label">parity checks</p>
         <p class="proof-sub muted small">Simulation matches the template</p>
       </div>
       <div class="proof-card">
-        <p class="proof-num">140,088 <span class="proof-unit">bytes</span></p>
+        <p class="proof-num">160,863 <span class="proof-unit">bytes</span></p>
         <p class="proof-label">WASM template</p>
-        <p class="proof-sub muted small">13.4% of the 1 MiB cap</p>
+        <p class="proof-sub muted small">15.3% of the 1 MiB cap</p>
       </div>
     </div>
     <div class="card proof-commands">
@@ -220,20 +228,27 @@ cargo clippy --all-targets</code></pre>
 
   <details class="card disclosure" id="walkthrough">
     <summary>
-      <span class="summary-title">Guided walkthrough <span class="muted">— about 2 minutes</span></span>
-      <span class="steps-progress"><span id="walkthrough-count">0 / 9</span> steps complete</span>
+      <span class="summary-title">Guided walkthrough <span class="muted">— about 4 minutes</span></span>
+      <span class="steps-progress"><span id="walkthrough-count">0 / 16</span> steps complete</span>
     </summary>
-    <p>Nine steps. Each ticks itself off as you do it — including the rejections.</p>
+    <p>Sixteen steps. Each ticks itself off as you do it — including the rejections.</p>
     <ol class="steps">
       <li data-step="pledge-bima">Pledge <strong>400</strong> as <strong>Bima</strong> on <em>Community radio</em>.</li>
       <li data-step="pledge-sari">Switch to <strong>Sari</strong> and pledge <strong>600</strong> on <em>Community radio</em> — the goal fills and the <code>Funded</code> event fires.</li>
       <li data-step="pledge-mural">Pledge <strong>300</strong> as <strong>Bima</strong> on <em>Neighborhood mural</em>. Do this <em>before</em> advancing time: pledges close at the deadline. This campaign will miss its goal — that is what makes the refund steps below possible.</li>
       <li data-step="early-claim">Switch to <strong>Rani</strong> and try <strong>Claim</strong> before the deadline — it must be <em>rejected</em> (too early).</li>
+      <li data-step="create-promise">As <strong>Rani</strong>, create <em>Rooftop garden</em>: goal <strong>900</strong>, promise “Backers get a name on the garden gate + first harvest share.”, deadline <strong>5</strong> epochs. Note the <strong>100 TARI</strong> bond — it leaves Rani's wallet at creation.</li>
+      <li data-step="fund-created">Fund <em>Rooftop garden</em>: pledge <strong>600</strong> as <strong>Bima</strong>, then <strong>300</strong> as <strong>Sari</strong>.</li>
       <li data-step="advance">Advance the epoch to <strong>5</strong> (the deadline).</li>
-      <li data-step="claim">Claim <em>Community radio</em> as <strong>Rani</strong> — the full vault pays out.</li>
+      <li data-step="claim">Claim <em>Community radio</em> as <strong>Rani</strong> — tranche 1 of 3 pays out (333 of 1,000).</li>
+      <li data-step="veto-fails">As <strong>Bima</strong>, <strong>Veto</strong> <em>Community radio</em> — 400 of 1,000 is under half, so the veto fails. The tally stays visible; the campaign continues.</li>
+      <li data-step="claim-tranche-2">Jump <strong>+72</strong> to epoch 77, then claim tranche 2 as <strong>Rani</strong>. The veto tally resets on release.</li>
+      <li data-step="veto-succeeds"><strong>Veto</strong> as <strong>Bima</strong>, then as <strong>Sari</strong> — together over half, so the veto succeeds and the rest freezes.</li>
+      <li data-step="refund-bond-share">As <strong>Bima</strong>, <strong>Refund</strong> <em>Community radio</em> — a pro-rata share of what remains, plus a share of the forfeited bond.</li>
       <li data-step="refund">Switch to <strong>Bima</strong> and <strong>Refund</strong> <em>Neighborhood mural</em> — full repayment.</li>
       <li data-step="double-refund">Refund the same pledge again — it must be <em>rejected</em> (double refund).</li>
-      <li data-step="refund-after-success">Try refunding <em>Community radio</em> — it must be <em>rejected</em> (refunds closed after success).</li>
+      <li data-step="complete-bond">Finish <em>Rooftop garden</em> as <strong>Rani</strong>: claim tranche 1, jump <strong>+72</strong>, claim tranche 2, jump <strong>+72</strong>, claim tranche 3 — then <strong>Claim bond</strong>.</li>
+      <li data-step="refund-after-success">Try refunding <em>Rooftop garden</em> — it must be <em>rejected</em> (refunds closed after completion).</li>
     </ol>
   </details>
 
@@ -243,11 +258,15 @@ cargo clippy --all-targets</code></pre>
       <span class="muted small">Honest limits</span>
     </summary>
     <ul class="detail-list">
-      <li><strong>This page is a simulation.</strong> No template has been published to Esmeralda or mainnet, and no on-chain state exists. The simulation mirrors the template rules and is parity-tested (<code>node --test app/sim.test.mjs</code>); the template rules are proven against the real engine (<code>cargo test</code>, 15 tests).</li>
-      <li><strong>Pledge amounts are public.</strong> Vault-based accounting means anyone can read who pledged how much. That is a deliberate v1 design choice, not an oversight. Hiding amounts would need a confidential/stealth design and is out of scope.</li>
-      <li><strong>No partial refunds, no milestones, no platform fee.</strong> All-or-nothing, one claim, full refunds. Stretch ideas are listed in the README, not claimed here.</li>
+      <li><strong>This page is a simulation.</strong> No template has been published to Esmeralda or mainnet, and no on-chain state exists. The simulation mirrors the template rules and is parity-tested (<code>node --test app/sim.test.mjs</code>); the template rules are proven against the real engine (<code>cargo test</code>, 52 tests).</li>
+      <li><strong>The promise is not enforced.</strong> The promise text is the creator's words, stored on-chain and labeled as such. The template cannot check whether a radio station was built. Backers judge the promise; the veto is their enforcement tool.</li>
+      <li><strong>Released funds cannot be recovered.</strong> No code can force a human to work or claw back a released tranche. A creator who takes tranche 1 and vanishes keeps tranche 1. What the mechanism guarantees is bounded loss: unreleased funds stay under backer control, and the bond compensates backers on veto or abandonment.</li>
+      <li><strong>Majority apathy rules.</strong> A veto needs strictly more than 50% of pledged value. If most backers never act, releases proceed. Apathy is consent — that is the stated rule, not a hidden flaw.</li>
+      <li><strong>The bond prices dishonesty; it does not prevent it.</strong> A wealthy bad actor can afford to lose bonds. The bond raises the cost of every attempt and makes mass scam campaigns unprofitable at small scales; it is not a guarantee of good behavior.</li>
+      <li><strong>Parameters are protocol constants</strong> — 3 tranches, 72-epoch windows, 10% bond with a 100 floor — chosen and justified in the spec, not tuned to live TARI prices or real campaign data. A production deployment would revisit them with real usage data.</li>
+      <li><strong>Pledge amounts are public.</strong> Vault-based accounting means anyone can read who pledged how much. That is a deliberate design choice, not an oversight. Hiding amounts would need a confidential/stealth design and is out of scope.</li>
       <li><strong>Live mode is not wired up.</strong> The section below detects a Tari wallet but cannot transact: no template address is published, so there is nothing to call. It will honestly say so. Never trust a demo that claims a live path it cannot show.</li>
-      <li><strong>Epochs are coarse on real networks</strong> (~20 min mainnet, ~1 h Esmeralda), so real campaigns run for days, not minutes. The demo's epoch control exists only to make the story judgeable in two minutes.</li>
+      <li><strong>Epochs are coarse on real networks</strong> (~20 min mainnet, ~1 h Esmeralda), so real veto windows last a day or more. The demo's epoch control exists only to make the story judgeable in minutes.</li>
     </ul>
   </details>
 
