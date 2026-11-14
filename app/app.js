@@ -104,6 +104,13 @@ function markStep(step) {
   state.progress[step] = true;
   const item = document.querySelector(`[data-step="${step}"]`);
   if (item) item.classList.add("done");
+  updateWalkthroughCount();
+}
+
+// Presentational only: mirrors how many checklist items are done.
+function updateWalkthroughCount() {
+  el("walkthrough-count").textContent =
+    `${Object.keys(state.progress).length} / ${WALKTHROUGH_STEPS.length}`;
 }
 
 function statusLabel(sim) {
@@ -121,6 +128,25 @@ function statusLabel(sim) {
       return "Settled — goal missed, refunds open";
     default:
       return status;
+  }
+}
+
+// Short pill label for the status badge; the full sentence from
+// statusLabel stays visible as the status note below the card header.
+function shortStatusLabel(sim) {
+  switch (sim.status(state.epoch)) {
+    case "claimed":
+      return "Claimed";
+    case "open":
+      return "Open";
+    case "open-funded":
+      return "Goal reached";
+    case "settled-funded":
+      return "Settled · funded";
+    case "settled-failed":
+      return "Refunds open";
+    default:
+      return sim.status(state.epoch);
   }
 }
 
@@ -143,19 +169,28 @@ function render() {
     const pct = sim.goal > 0n ? Number((sim.totalPledged * 100n) / sim.goal) : 0;
     const card = document.createElement("article");
     card.className = "card campaign";
+    // Markup hooks this template must keep: h3, p.muted > 3 strongs
+    // (creator, deadline, backers), .status, .status-note, .progress /
+    // .progress-bar, .total, .goal, .mine, .amount, .pledge-btn,
+    // .claim-btn, .refund-btn, .error. Restyle freely; do not rename.
     card.innerHTML = `
-      <h3></h3>
-      <p class="muted">Creator: <strong></strong> · Deadline: epoch <strong></strong> · Backers: <strong></strong></p>
-      <p class="status"></p>
-      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(pct, 100)}">
+      <div class="campaign-head">
+        <div>
+          <h3></h3>
+          <p class="meta muted">Creator: <strong></strong> · Deadline: epoch <strong></strong> · Backers: <strong></strong></p>
+        </div>
+        <p class="status"></p>
+      </div>
+      <p class="status-note muted small"></p>
+      <p class="raised"><strong class="total"></strong><span class="raised-goal"> / <span class="goal"></span> TARI pledged</span><span class="pct-badge">${pct}%</span></p>
+      <div class="progress${pct >= 100 ? " full" : ""}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(pct, 100)}" aria-label="Funding progress">
         <div class="progress-bar" style="width: ${Math.min(pct, 100)}%"></div>
       </div>
-      <p><strong class="total"></strong> / <span class="goal"></span> TARI pledged (${pct}%)</p>
-      <p>Your pledge (${PERSONAS[state.activePersona].name}): <strong class="mine"></strong> TARI</p>
+      <p class="mine-line">Your pledge (${PERSONAS[state.activePersona].name}): <strong class="mine"></strong> TARI</p>
       <div class="row">
         <label>Amount <input type="text" inputmode="numeric" class="amount" value="${defaultAmount ?? "400"}" aria-label="Pledge amount in TARI units"></label>
-        <button type="button" class="pledge-btn">Pledge</button>
-        <button type="button" class="claim-btn">Claim</button>
+        <button type="button" class="pledge-btn btn-primary">Pledge</button>
+        <button type="button" class="claim-btn btn-success">Claim</button>
         <button type="button" class="refund-btn">Refund</button>
       </div>
       <p class="error" role="alert" hidden></p>
@@ -164,7 +199,10 @@ function render() {
     card.querySelectorAll("p.muted strong")[0].textContent = PERSONAS[sim.creator]?.name ?? sim.creator;
     card.querySelectorAll("p.muted strong")[1].textContent = String(sim.deadlineEpoch);
     card.querySelectorAll("p.muted strong")[2].textContent = String(sim.pledgeCount);
-    card.querySelector(".status").textContent = statusLabel(sim);
+    const statusEl = card.querySelector(".status");
+    statusEl.textContent = shortStatusLabel(sim);
+    statusEl.dataset.state = sim.status(state.epoch);
+    card.querySelector(".status-note").textContent = statusLabel(sim);
     card.querySelector(".total").textContent = formatAmount(sim.totalPledged);
     card.querySelector(".goal").textContent = formatAmount(sim.goal);
     card.querySelector(".mine").textContent = formatAmount(mine);
@@ -295,6 +333,7 @@ function setEpoch(epoch) {
 
 function init() {
   freshDemo();
+  updateWalkthroughCount();
 
   document.querySelectorAll(".persona-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -310,6 +349,7 @@ function init() {
     for (const step of WALKTHROUGH_STEPS) {
       document.querySelector(`[data-step="${step}"]`)?.classList.remove("done");
     }
+    updateWalkthroughCount();
     logCall("Demo reset: epoch 0, wallets restored, two fresh campaigns.");
     render();
   });
