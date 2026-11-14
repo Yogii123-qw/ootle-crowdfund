@@ -18,7 +18,7 @@ every backer refunds in full — no platform cut, no custody beyond the template
 
 - Code: https://github.com/Yogii123-qw/ootle-crowdfund
 - MVP app: https://yogii123-qw.github.io/ootle-crowdfund/
-- Announcement post (Bluesky / Reddit / Medium / YouTube — X is not accepted this month): TODO_ANNOUNCEMENT_URL
+- Announcement post (Bluesky / Reddit / Medium / YouTube — X is not accepted this month): https://www.reddit.com/r/tari/comments/1xwaouw/ootle_crowdfund_my_entry_for_the_tari_november/
 - Tari payment address (L1 Minotari address): 12BJgCZx2gbkcXmyMqkgCFqyPUCLJbkkL7sJaWUG1omzmk4DRnJqUCCcw2eRVMadssZ6EBH534N21ohMgeDh5PzxLJT
 
 ## Description (forum reply body)
