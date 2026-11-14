@@ -1,0 +1,39 @@
+[package]
+name = "tari_crowdfund"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Pinned 2026-11-15: latest on crates.io, matching the official wasm-template
+# scaffold at HEAD (commit 672a25e, "Tari Ootle 0.53 / template_lib 0.40").
+# See Cargo.lock for the full resolved tree.
+tari_template_lib = { version = "=0.40.1" }
+
+[dev-dependencies]
+tari_template_test_tooling = "=0.53.4"
+
+[profile.release]
+opt-level = 's'     # Optimize for size.
+lto = true          # Enable Link Time Optimization.
+codegen-units = 1   # Reduce number of codegen units to increase optimizations.
+panic = 'abort'     # Abort on panic.
+strip = true
+
+# Wasmer and Cranelift are extremely slow when compiled in debug mode (~10x slower),
+# which makes template tests painfully slow. Optimize these specific crates even in
+# dev/test builds.
+[profile.dev.package.wasmer]
+opt-level = 2
+[profile.dev.package.wasmer-compiler]
+opt-level = 2
+[profile.dev.package.wasmer-compiler-cranelift]
+opt-level = 2
+[profile.dev.package.cranelift-codegen]
+opt-level = 2
+[profile.dev.package.cranelift-frontend]
+opt-level = 2
+[profile.dev.package.cranelift-entity]
+opt-level = 2
+
+[lib]
+crate-type = ["cdylib"]
