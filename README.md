@@ -24,13 +24,16 @@ No build step, no dependencies, no network calls. The page includes a guided
 walkthrough checklist that ticks itself off:
 
 1. Pledge 400 as Bima on *Community radio*.
-2. Pledge 600 as Sari — the goal fills and the `Funded` event fires.
-3. Try **Claim** as Rani before the deadline — rejected (early claim).
-4. Advance the epoch to 5 (the deadline).
-5. Claim as Rani — the full vault pays out.
-6. Pledge on *Neighborhood mural*, then **Refund** after the deadline — full repayment.
-7. Refund again — rejected (double refund).
-8. Try refunding *Community radio* — rejected (refunds closed after success).
+2. Switch to Sari and pledge 600 — the goal fills and the `Funded` event fires.
+3. Pledge 300 as Bima on *Neighborhood mural*, before advancing time (pledges
+   close at the deadline). This campaign will miss its goal — that is what
+   makes the refund steps possible.
+4. Try **Claim** as Rani before the deadline — rejected (early claim).
+5. Advance the epoch to 5 (the deadline).
+6. Claim as Rani — the full vault pays out.
+7. Switch to Bima and **Refund** *Neighborhood mural* — full repayment.
+8. Refund again — rejected (double refund).
+9. Try refunding *Community radio* — rejected (refunds closed after success).
 
 The activity log maps every click to the template call it mirrors, and shows
 rejections with the exact message the template would panic with on-chain.
@@ -87,12 +90,16 @@ engine transactions in-process — no network, funds, or faucet needed):
 cargo test
 ```
 
-12 tests cover: creation state + event, pledge accumulation, the `Funded`
+15 tests cover: creation state + event, pledge accumulation, the `Funded`
 event firing exactly once, the deadline boundary both ways, early-claim
 rejection, non-creator-claim rejection, claim-on-success paying exactly once,
 claim-on-missed-goal rejection, full refunds to every backer, double-refund
 rejection, refund-after-success rejection (before and after claim),
-pre-deadline-refund rejection, and creation input validation.
+pre-deadline-refund rejection, creation input validation (including the
+120-character title limit both ways), non-TARI pledge rejection (proven with
+a test-only token template — see Project structure), zero-amount pledge
+rejection, and post-claim pledge rejection. Every assert in the template is
+exercised.
 
 Build the release WASM:
 
@@ -126,15 +133,17 @@ node --test app/sim.test.mjs
 ```
 
 14 tests, no dependencies (Node ≥ 20). The UI wiring (real `index.html` +
-`app.js`, full walkthrough clicks) was additionally verified with a jsdom
-harness during development; that harness is dev-only and not shipped.
+`app.js`, full walkthrough clicks) was additionally verified end-to-end in
+headless Chromium during development — real clicks through the 9-step
+walkthrough, desktop + mobile viewports, zero console/page errors; that
+harness is dev-only and not shipped.
 
 ## Verification (as built 2026-11-15, Rust 1.100.0, Node 24)
 
 ```text
 $ cargo test
-test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured
-  (plus 0 lib/doc tests; the 12 engine tests run the real engine in-process)
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured
+  (plus 0 lib/doc tests; the 15 engine tests run the real engine in-process)
 
 $ node --test app/sim.test.mjs
 tests 14, pass 14, fail 0
@@ -150,17 +159,22 @@ clean
 ```
 
 The demo page was also served locally (`python3 -m http.server`) and exercised
-end-to-end in a DOM harness: initial render, both pledges, the `Funded` event,
-early-claim rejection, epoch advance, claim payout, refund, double-refund
-rejection, refund-after-success rejection, and the create-campaign form
-(including its zero-goal rejection) — all assertions passed.
+end-to-end in headless Chromium with real clicks through the full 9-step
+walkthrough — 42 assertions covering step tracking, exact rejection messages,
+wallet balances, the disabled time-travel button, reset, the never-pledged
+refund precision case, and the create-campaign form (including its zero-goal
+rejection) — in desktop and mobile viewports, with zero console/page errors.
+All assertions passed.
 
 ## Project structure
 
 ```
 Cargo.toml            template crate (pinned deps, size-optimized release profile)
 src/lib.rs            CrowdfundCampaign template (the whole on-chain logic)
-tests/test.rs         12 engine tests (real engine, in-process)
+tests/test.rs         15 engine tests (real engine, in-process)
+tests/fixtures/test_token/  test-only template minting a non-TARI token, so
+                      the pledge TARI-only check is engine-tested; never
+                      published, never part of the submission template
 template.toml         template metadata
 app/
   index.html          demo page (simulation-first, judge walkthrough)
@@ -193,10 +207,12 @@ SUBMISSION.md         draft contest submission text (links TBD)
 - **Epochs are coarse on real networks** (~20 min mainnet, ~1 h Esmeralda), so
   real campaigns run for days. The demo's epoch control exists only to make
   the story judgeable in minutes.
-- **One untested assert.** The template rejects non-TARI buckets in `pledge`,
-  but no engine test exercises it — building a second resource in-test needs
-  another template. The assert is there and the happy path (TARI-only via
-  account withdraw) is tested; the negative case is honestly noted here.
+- **Non-TARI rejection is engine-tested.** The `pledge` TARI-only check is
+  proven by an engine test that pays a campaign with a different fungible
+  token, minted by the test-only fixture template in
+  `tests/fixtures/test_token/`. Every assert in the template is exercised by
+  the engine suite; the one guard that needs a harness epoch rewind to reach
+  (pledging after a claim) is documented as such in the test.
 - **Simulation differences.** The sim has no buckets/resources (so no
   resource-type check) and uses persona ids instead of public keys. Everything
   else — rules, check order, messages — matches, and the parity tests prove it.

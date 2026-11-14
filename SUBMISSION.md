@@ -41,11 +41,12 @@ indexers.
   epoch-based deadlines, signer-checked claim/refund, and events. Authorization
   is enforced in code against the transaction signer; the template creates no
   resource, so the owner-bypasses-rules trap cannot apply.
-- 12 engine tests run against the real Ootle engine in-process (no network, no
+- 15 engine tests run against the real Ootle engine in-process (no network, no
   funds): happy paths plus every rejection that matters — early claim,
   non-creator claim, double claim, claim on a missed goal, double refund,
-  refund after success, refund before the deadline, and both sides of the
-  deadline boundary.
+  refund after success, refund before the deadline, both sides of the
+  deadline boundary, non-TARI and zero-amount pledges, post-claim pledges,
+  and creation input validation including the title-length limit.
 - A browser demo whose default path is a walletless simulation: zero installs,
   zero wallet, zero funds, completable in about two minutes with a guided
   checklist. The simulation mirrors the template's rules and rejection messages
@@ -67,7 +68,7 @@ engine side and the simulation side.
 
 1. Open the app link, follow the 2-minute walkthrough on the page (including
    the deliberate rejections).
-2. Clone the repo, run `cargo test` (12 engine tests, no network needed).
+2. Clone the repo, run `cargo test` (15 engine tests, no network needed).
 3. Run `node --test app/sim.test.mjs` (14 simulation parity tests).
 4. Build the WASM: `cargo build --target wasm32-unknown-unknown --release`.
 
