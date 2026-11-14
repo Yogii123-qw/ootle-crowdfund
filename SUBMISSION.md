@@ -14,11 +14,10 @@ Ootle Crowdfund
 All-or-nothing crowdfunding on Ootle: goal met, the creator claims; goal missed,
 every backer refunds in full — no platform cut, no custody beyond the template.
 
-## Links (repo + app URLs pending push — expected repo:
-https://github.com/Yogii123-qw/ootle-crowdfund — verify after push)
+## Links (verified live 15 Nov 2026)
 
-- Code: TODO_REPO_URL
-- MVP app: TODO_APP_URL
+- Code: https://github.com/Yogii123-qw/ootle-crowdfund
+- MVP app: https://yogii123-qw.github.io/ootle-crowdfund/
 - Announcement post (Bluesky / Reddit / Medium / YouTube — X is not accepted this month): TODO_ANNOUNCEMENT_URL
 - Tari payment address (L1 Minotari address): 12BJgCZx2gbkcXmyMqkgCFqyPUCLJbkkL7sJaWUG1omzmk4DRnJqUCCcw2eRVMadssZ6EBH534N21ohMgeDh5PzxLJT
 
