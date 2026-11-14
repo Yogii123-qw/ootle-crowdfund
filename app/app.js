@@ -22,11 +22,16 @@ const state = {
   wallets: new Map(),
   campaigns: [],
   progress: {},
+  // Successful refunds, as "campaignId:persona" keys. Lets the checklist tell
+  // a genuine double-refund apart from a refund attempt by someone who never
+  // pledged — both are rejected with the same message.
+  refunded: new Set(),
 };
 
 const WALKTHROUGH_STEPS = [
   "pledge-bima",
   "pledge-sari",
+  "pledge-mural",
   "early-claim",
   "advance",
   "claim",
@@ -40,9 +45,12 @@ function freshDemo() {
   state.activePersona = "bima";
   state.wallets = new Map(Object.keys(PERSONAS).map((id) => [id, STARTING_BALANCE]));
   state.progress = {};
+  state.refunded = new Set();
   state.campaigns = [
     {
       id: "c1",
+      // The walkthrough's first pledge is 400; prefill it so step 1 is one click.
+      defaultAmount: "400",
       sim: new CrowdfundSim({
         creator: "rani",
         title: "Community radio",
@@ -53,6 +61,8 @@ function freshDemo() {
     },
     {
       id: "c2",
+      // The walkthrough's mural pledge is 300; prefill it so step 3 is one click.
+      defaultAmount: "300",
       sim: new CrowdfundSim({
         creator: "rani",
         title: "Neighborhood mural",
@@ -116,6 +126,9 @@ function statusLabel(sim) {
 
 function render() {
   el("epoch-display").textContent = String(state.epoch);
+  // Time only moves forward: once the deadline is reached, jumping "to"
+  // epoch 5 would rewind it, so the button disables itself.
+  el("epoch-to-deadline").disabled = state.epoch >= 5;
   for (const [id, balance] of state.wallets) {
     el(`balance-${id}`).textContent = formatAmount(balance);
   }
@@ -125,7 +138,7 @@ function render() {
 
   const grid = el("campaigns");
   grid.innerHTML = "";
-  for (const { id, sim } of state.campaigns) {
+  for (const { id, sim, defaultAmount } of state.campaigns) {
     const mine = sim.pledgeOf(state.activePersona);
     const pct = sim.goal > 0n ? Number((sim.totalPledged * 100n) / sim.goal) : 0;
     const card = document.createElement("article");
@@ -140,7 +153,7 @@ function render() {
       <p><strong class="total"></strong> / <span class="goal"></span> TARI pledged (${pct}%)</p>
       <p>Your pledge (${PERSONAS[state.activePersona].name}): <strong class="mine"></strong> TARI</p>
       <div class="row">
-        <label>Amount <input type="text" inputmode="numeric" class="amount" value="400" aria-label="Pledge amount in TARI units"></label>
+        <label>Amount <input type="text" inputmode="numeric" class="amount" value="${defaultAmount ?? "400"}" aria-label="Pledge amount in TARI units"></label>
         <button type="button" class="pledge-btn">Pledge</button>
         <button type="button" class="claim-btn">Claim</button>
         <button type="button" class="refund-btn">Refund</button>
@@ -214,6 +227,7 @@ function doPledge(campaignId, rawAmount, showError) {
     if (campaignId === "c1" && events.some((e) => e.topic === "CrowdfundCampaign.Funded")) {
       markStep("pledge-sari");
     }
+    if (campaignId === "c2") markStep("pledge-mural");
   } catch (err) {
     showError(err.message);
     logReject(err.message);
@@ -249,13 +263,25 @@ function doRefund(campaignId, showError) {
   try {
     const { amount, events } = entry.sim.refund(persona, state.epoch);
     state.wallets.set(persona, state.wallets.get(persona) + amount);
+    state.refunded.add(`${campaignId}:${persona}`);
     logOk(`Refunded ${formatAmount(amount)} TARI to ${PERSONAS[persona].name}. Events: ${describeEvents(events)}`);
     if (campaignId === "c2") markStep("refund");
   } catch (err) {
     showError(err.message);
     logReject(err.message);
-    if (err.message === "No pledge to refund for this backer") markStep("double-refund");
-    if (err.message.includes("refunds are closed")) markStep("refund-after-success");
+    // A "no pledge" rejection is a double-refund only if this persona already
+    // refunded this campaign; otherwise they simply never pledged.
+    if (
+      err.message === "No pledge to refund for this backer" &&
+      state.refunded.has(`${campaignId}:${persona}`)
+    ) {
+      markStep("double-refund");
+    }
+    // "Refunds are closed" proves the success path only on the funded
+    // campaign; on an unfunded one it would mean the goal was met instead.
+    if (campaignId === "c1" && err.message.includes("refunds are closed")) {
+      markStep("refund-after-success");
+    }
   }
   render();
 }
@@ -281,7 +307,9 @@ function init() {
   el("reset-demo").addEventListener("click", () => {
     freshDemo();
     el("log").innerHTML = "";
-    document.querySelectorAll(".steps li").forEach((li) => li.classList.remove("done"));
+    for (const step of WALKTHROUGH_STEPS) {
+      document.querySelector(`[data-step="${step}"]`)?.classList.remove("done");
+    }
     logCall("Demo reset: epoch 0, wallets restored, two fresh campaigns.");
     render();
   });
