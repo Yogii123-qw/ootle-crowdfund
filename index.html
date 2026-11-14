@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ootle Crowdfund — all-or-nothing crowdfunding (simulation demo)</title>
+<meta name="description" content="All-or-nothing crowdfunding on Tari Ootle: goal met, the creator claims; goal missed, every backer refunds in full. Walletless browser simulation of the real Rust template.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="hero">
+  <p class="badge">SIMULATION — no wallet, no network, no real funds</p>
+  <h1>Ootle Crowdfund</h1>
+  <p class="lede">All-or-nothing crowdfunding. A creator sets a goal and an epoch deadline.
+  Backers pledge TARI into a vault. Goal met by the deadline → the creator claims it all.
+  Goal missed → every backer refunds in full. No platform cut, no custody beyond the template.</p>
+  <p class="lede small">This page runs a faithful in-browser simulation of the
+  <code>CrowdfundCampaign</code> Rust template — same rules, same rejection messages.
+  The template itself is tested against the real Ootle engine (<code>cargo test</code>).
+  Nothing here touches a network or a wallet.</p>
+</header>
+
+<main>
+  <section class="card" id="walkthrough">
+    <h2>Judge walkthrough <span class="muted">(~2 minutes)</span></h2>
+    <p>Follow the steps. Each one ticks itself off as you do it. Rejections are part of the demo —
+    they prove the template says <em>no</em> exactly when it should.</p>
+    <ol class="steps">
+      <li data-step="pledge-bima">Pledge <strong>400</strong> as <strong>Bima</strong> on <em>Community radio</em>.</li>
+      <li data-step="pledge-sari">Pledge <strong>600</strong> as <strong>Sari</strong> on <em>Community radio</em> — watch the goal fill and the <code>Funded</code> event fire.</li>
+      <li data-step="early-claim">Try <strong>Claim</strong> as <strong>Rani</strong> before the deadline — it must be <em>rejected</em>.</li>
+      <li data-step="advance">Advance the epoch to <strong>5</strong> (the deadline).</li>
+      <li data-step="claim">Claim <em>Community radio</em> as <strong>Rani</strong> — the full vault pays out.</li>
+      <li data-step="refund">Pledge on <em>Neighborhood mural</em>, then <strong>Refund</strong> after the deadline — full repayment.</li>
+      <li data-step="double-refund">Refund the same pledge again — it must be <em>rejected</em> (double refund).</li>
+      <li data-step="refund-after-success">Try refunding <em>Community radio</em> — it must be <em>rejected</em> (refunds closed after success).</li>
+    </ol>
+    <p class="muted small">Tip: switch the active persona with the “Acting as” control. The active persona is the transaction signer — the template checks it on every call.</p>
+  </section>
+
+  <section class="card controls">
+    <div>
+      <h2>Time</h2>
+      <p>Current epoch: <strong id="epoch-display">0</strong> <span class="muted">(deadline for both campaigns: epoch 5)</span></p>
+      <div class="row">
+        <button id="epoch-plus-1" type="button">Advance +1 epoch</button>
+        <button id="epoch-to-deadline" type="button">Jump to epoch 5</button>
+      </div>
+      <p class="muted small">On Ootle mainnet an epoch is ~20 minutes. Here you control time so the deadline story fits in two minutes.</p>
+    </div>
+    <div>
+      <h2>Acting as <span class="muted">(transaction signer)</span></h2>
+      <div class="row" role="group" aria-label="Active persona">
+        <button type="button" class="persona-btn" data-persona="rani">Rani · creator</button>
+        <button type="button" class="persona-btn" data-persona="bima">Bima · backer</button>
+        <button type="button" class="persona-btn" data-persona="sari">Sari · backer</button>
+      </div>
+      <h2>Wallets <span class="muted">(demo units, not real TARI)</span></h2>
+      <ul class="wallets">
+        <li>Rani: <strong id="balance-rani">10,000</strong></li>
+        <li>Bima: <strong id="balance-bima">10,000</strong></li>
+        <li>Sari: <strong id="balance-sari">10,000</strong></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Demo</h2>
+      <button id="reset-demo" type="button">Reset demo</button>
+      <p class="muted small">Restores both campaigns, all wallets, epoch 0, and the walkthrough checklist.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Campaigns</h2>
+    <div id="campaigns" class="campaign-grid"></div>
+  </section>
+
+  <section class="card">
+    <h2>Create a campaign</h2>
+    <form id="create-form">
+      <label>Title
+        <input id="new-title" type="text" maxlength="120" required placeholder="e.g. Fund the next open-source release">
+      </label>
+      <label>Goal (TARI units, whole number)
+        <input id="new-goal" type="text" inputmode="numeric" required placeholder="e.g. 1000">
+      </label>
+      <label>Deadline (epochs from now)
+        <input id="new-deadline" type="number" min="1" max="1000" value="5" required>
+      </label>
+      <button type="submit">Create campaign</button>
+    </form>
+    <p class="muted small">The creator is the active persona. The deadline must be in the future — the template rejects anything else.</p>
+    <p id="create-error" class="error" role="alert" hidden></p>
+  </section>
+
+  <section class="card">
+    <h2>Activity log <span class="muted">— every click, mapped to the template call it mirrors</span></h2>
+    <ol id="log" class="log" aria-live="polite"></ol>
+    <button id="clear-log" type="button">Clear log</button>
+  </section>
+
+  <section class="card">
+    <h2>How it works</h2>
+    <ul>
+      <li><strong>One campaign = one component.</strong> <code>new(title, goal, deadline_epoch)</code> opens it; the caller becomes the creator.</li>
+      <li><strong>Escrow vault.</strong> <code>pledge(bucket)</code> deposits TARI into the campaign vault and records the backer in a ledger. Pledges accumulate; overfunding is allowed.</li>
+      <li><strong>Epoch deadline.</strong> Pledges are accepted while <code>current_epoch &lt; deadline_epoch</code>. At <code>current_epoch &gt;= deadline_epoch</code> the campaign settles — the boundary is tested both ways.</li>
+      <li><strong>Exactly one outcome.</strong> Goal met → <code>claim()</code> pays the whole vault to the creator, once. Goal missed → <code>refund()</code> repays each backer in full, once. The other path is rejected with a specific message.</li>
+      <li><strong>Events.</strong> <code>CampaignCreated</code>, <code>Pledged</code>, <code>Funded</code> (once, when the goal is first reached), <code>Claimed</code>, <code>Refunded</code> — indexable by explorers.</li>
+      <li><strong>Access rules.</strong> Methods are callable by anyone; authorization is enforced in code by comparing the transaction signer to the recorded creator/pledge keys. The template creates no resource, so there are no owner-bypassable resource rules.</li>
+    </ul>
+  </section>
+
+  <section class="card limits">
+    <h2>Honest limits — read before judging</h2>
+    <ul>
+      <li><strong>This page is a simulation.</strong> No template has been published to Esmeralda or mainnet, and no on-chain state exists. The simulation mirrors the template rules and is parity-tested (<code>node --test app/sim.test.mjs</code>); the template rules are proven against the real engine (<code>cargo test</code>, 12 tests).</li>
+      <li><strong>Pledge amounts are public.</strong> Vault-based accounting means anyone can read who pledged how much. That is a deliberate v1 design choice, not an oversight. Hiding amounts would need a confidential/stealth design and is out of scope.</li>
+      <li><strong>No partial refunds, no milestones, no platform fee.</strong> All-or-nothing, one claim, full refunds. Stretch ideas are listed in the README, not claimed here.</li>
+      <li><strong>Live mode is not wired up.</strong> The section below detects a Tari wallet but cannot transact: no template address is published, so there is nothing to call. It will honestly say so. Never trust a demo that claims a live path it cannot show.</li>
+      <li><strong>Epochs are coarse on real networks</strong> (~20 min mainnet, ~1 h Esmeralda), so real campaigns run for days, not minutes. The demo's epoch control exists only to make the story judgeable in two minutes.</li>
+    </ul>
+  </section>
+
+  <section class="card" id="live">
+    <h2>Live mode <span class="badge small">OPTIONAL · NOT VERIFIED · STUB</span></h2>
+    <p id="live-status">Checking for a Tari wallet…</p>
+    <p class="muted small">What live mode would need: a published template address on Esmeralda/mainnet, the
+    <code>window.tari</code> provider (Sapient extension or Tari Universe web wallet), and indexer reads for
+    campaign discovery. None of that is configured here, so this demo stays in simulation. The stub code
+    in <code>live.js</code> only detects a wallet and reports status — it never prompts, never signs, and
+    never submits a transaction.</p>
+  </section>
+
+  <footer class="muted small">
+    <p>Ootle Crowdfund — original code for the Tari November Build Contest (theme: MVP). MIT licensed.
+    Template: Rust + <code>tari_template_lib</code> 0.40.1. Simulation: dependency-free JavaScript.
+    See <code>README.md</code> for build/test commands and the full honest-limits list.</p>
+  </footer>
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
