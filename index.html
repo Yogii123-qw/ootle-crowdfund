@@ -5,41 +5,94 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ootle Crowdfund — all-or-nothing crowdfunding (simulation demo)</title>
 <meta name="description" content="All-or-nothing crowdfunding on Tari Ootle: goal met, the creator claims; goal missed, every backer refunds in full. Walletless browser simulation of the real Rust template.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23a83c1e'/%3E%3Ctext x='50' y='72' font-size='58' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='800'%3ET%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#160c25">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Ootle Crowdfund — all-or-nothing crowdfunding on Tari Ootle">
+<meta property="og:description" content="Goal met, the creator claims. Goal missed, every backer refunds in full. Walletless browser simulation of the real Rust template.">
+<meta property="og:url" content="https://yogii123-qw.github.io/ootle-crowdfund/">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://yogii123-qw.github.io/ootle-crowdfund/">
+<noscript><style>#splash{display:none!important}</style></noscript>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 38'%3E%3Crect width='38' height='38' rx='9' fill='%23160c25'/%3E%3Cg transform='translate(5.7,5.3) scale(0.72)'%3E%3Cpath d='M0 10.2215V20.6884L15.321 37.7961L37.0481 20.7502V10.2124L15.3902 0.203934L0 10.2215ZM13.4816 30.1765L3.71336 19.2693V13.3381L13.4816 15.8506V30.1765ZM17.195 31.6065V16.804L31.4044 20.4591L17.195 31.6065ZM33.3366 12.5848V17.1224L6.72081 10.2779L15.6958 4.43582L33.3348 12.5867L33.3366 12.5848Z' fill='%23c2ff28'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<a class="skip-link" href="#workspace">Skip to the app</a>
+<!-- Official Tari gem mark, defined once and reused via <use>. Path data
+     is verbatim from tari.com's production wordmark SVG; the canonical
+     vendored copy with full source notes is app/tari-mark.svg. -->
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol id="tari-gem" viewBox="0 0 37.05 38">
+    <path d="M0 10.2215V20.6884L15.321 37.7961L37.0481 20.7502V10.2124L15.3902 0.203934L0 10.2215ZM13.4816 30.1765L3.71336 19.2693V13.3381L13.4816 15.8506V30.1765ZM17.195 31.6065V16.804L31.4044 20.4591L17.195 31.6065ZM33.3366 12.5848V17.1224L6.72081 10.2779L15.6958 4.43582L33.3348 12.5867L33.3366 12.5848Z"/>
+  </symbol>
+</svg>
+<div class="splash" id="splash" aria-hidden="true">
+  <div class="splash-inner">
+    <svg class="splash-mark" width="84" height="86" aria-hidden="true"><use href="#tari-gem"/></svg>
+    <p class="splash-word">Ootle Crowdfund</p>
+    <span class="splash-rule" aria-hidden="true"></span>
+    <p class="splash-sub">Built on Tari Ootle</p>
+  </div>
+</div>
 <header class="topbar">
   <div class="wrap topbar-inner">
     <p class="brand">
       <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 32 32" width="30" height="30">
-          <rect width="32" height="32" rx="8" fill="#a83c1e"/>
-          <text x="16" y="23" font-size="19" text-anchor="middle" fill="#fff" font-family="system-ui, sans-serif" font-weight="800">T</text>
-        </svg>
+        <svg width="34" height="35" role="img" aria-label="Tari"><use href="#tari-gem"/></svg>
       </span>
-      Ootle Crowdfund
+      <span class="brand-text">Ootle Crowdfund<small>Built on Tari Ootle</small></span>
     </p>
+    <button type="button" class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="mobilenav" aria-label="Menu">
+      <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+    </button>
     <p class="topbar-note">Simulation · no wallet · no real funds</p>
   </div>
+  <nav class="mainnav" aria-label="Sections">
+    <div class="wrap mainnav-inner">
+      <a href="#workspace" data-nav>Campaigns</a>
+      <a href="#history-section" data-nav>History</a>
+      <a href="#about" data-nav>How it works</a>
+      <a href="#proof" data-nav>Proof</a>
+      <a href="#walkthrough" data-nav>Walkthrough</a>
+      <a href="#limits" data-nav>Read before judging</a>
+    </div>
+  </nav>
+  <nav class="mobilenav" id="mobilenav" aria-label="Sections">
+    <a href="#workspace" data-nav>Campaigns</a>
+    <a href="#history-section" data-nav>History</a>
+    <a href="#about" data-nav>How it works</a>
+    <a href="#proof" data-nav>Proof</a>
+    <a href="#walkthrough" data-nav>Walkthrough</a>
+    <a href="#limits" data-nav>Read before judging</a>
+  </nav>
+  <div class="motif" aria-hidden="true"></div>
 </header>
 
 <main class="wrap">
+  <noscript><p class="noscript">This demo needs JavaScript: the simulation, wallets, and walkthrough all run in your browser. Nothing is sent anywhere.</p></noscript>
   <section class="intro">
-    <h1>All-or-nothing crowdfunding.</h1>
-    <p class="lede">A creator sets a goal and an epoch deadline. Backers pledge TARI into a vault.
-    Goal met by the deadline → the creator claims it all. Goal missed → every backer refunds
-    in full. No platform cut, no custody beyond the template.</p>
-    <p class="lede-note">This page runs a faithful in-browser simulation of the
-    <code>CrowdfundCampaign</code> Rust template — same rules, same rejection messages.
-    Nothing here touches a network or a wallet.</p>
-    <p class="proof"><strong>15 of 15</strong> engine tests pass against the real Ootle engine
-    · <strong>14 of 14</strong> parity checks match the template · <strong>MIT</strong> licensed</p>
+    <h1><span class="accent-word">All-or-nothing</span> crowdfunding.</h1>
+    <p class="lede">Goal met by the deadline, the creator claims it all. Goal missed, every backer refunds in full.</p>
   </section>
 
-  <section class="card workspace" aria-label="Demo controls">
+  <nav class="entry-cards" aria-label="Choose your path">
+    <button type="button" class="entry-card" data-path="create">
+      <span class="entry-title">Create a campaign <span class="entry-arrow" aria-hidden="true">→</span></span>
+      <span class="entry-sub">Set a goal and a deadline as Rani.</span>
+    </button>
+    <button type="button" class="entry-card" data-path="back">
+      <span class="entry-title">Back a campaign <span class="entry-arrow" aria-hidden="true">→</span></span>
+      <span class="entry-sub">Pledge TARI as Bima or Sari.</span>
+    </button>
+    <button type="button" class="entry-card" data-path="tour">
+      <span class="entry-title">Follow the guided tour <span class="entry-arrow" aria-hidden="true">→</span></span>
+      <span class="entry-sub">Nine steps through every rule.</span>
+    </button>
+  </nav>
+
+  <section class="card workspace" id="workspace" tabindex="-1" aria-label="Demo controls">
     <div class="ws-group">
-      <p class="ws-label">Acting as <span class="ws-hint">The transaction signer</span></p>
+      <p class="ws-label">Acting as</p>
       <div class="row persona-row" role="group" aria-label="Active persona">
         <button type="button" class="persona-btn" data-persona="rani"><span class="avatar" aria-hidden="true">R</span><span class="persona-label">Rani<small>creator</small></span></button>
         <button type="button" class="persona-btn" data-persona="bima"><span class="avatar" aria-hidden="true">B</span><span class="persona-label">Bima<small>backer</small></span></button>
@@ -47,7 +100,7 @@
       </div>
     </div>
     <div class="ws-group">
-      <p class="ws-label">Wallets <span class="ws-hint">Demo units, not real TARI</span></p>
+      <p class="ws-label">Wallets</p>
       <ul class="wallets">
         <li><span class="wallet-name">Rani</span><strong id="balance-rani">10,000</strong></li>
         <li><span class="wallet-name">Bima</span><strong id="balance-bima">10,000</strong></li>
@@ -61,27 +114,24 @@
         <button id="epoch-plus-1" type="button">Advance +1 epoch</button>
         <button id="epoch-to-deadline" type="button">Jump to epoch 5</button>
       </div>
-      <p class="muted small ws-note">On Ootle mainnet an epoch is ~20 minutes. Here you control time so the deadline story fits in two minutes.</p>
     </div>
     <div class="ws-group ws-reset">
       <button id="reset-demo" type="button">Reset demo</button>
-      <p class="muted small ws-note">Restores both campaigns, all wallets, epoch 0, and the walkthrough checklist.</p>
     </div>
   </section>
 
-  <section class="campaigns-section">
+  <section class="campaigns-section" id="campaigns-section">
     <div class="section-head">
       <h2>Campaigns</h2>
-      <p class="muted">Two seeded campaigns — one will fund, one will miss.</p>
     </div>
     <div id="campaigns" class="campaign-grid"></div>
   </section>
 
-  <section class="card create">
+  <section class="card create" id="create">
     <h2>Create a campaign</h2>
     <form id="create-form">
       <label class="field-title">Title
-        <input id="new-title" type="text" maxlength="120" required placeholder="e.g. Fund the next open-source release">
+        <input id="new-title" type="text" maxlength="120" required placeholder="e.g. Fund the next release">
       </label>
       <label>Goal (TARI)
         <input id="new-goal" type="text" inputmode="numeric" required placeholder="e.g. 1000">
@@ -91,17 +141,80 @@
       </label>
       <button type="submit" class="btn-primary">Create campaign</button>
     </form>
-    <p class="muted small">The creator is the active persona. The goal must be a whole number and the deadline in the future — the template rejects anything else.</p>
     <p id="create-error" class="error" role="alert" hidden></p>
   </section>
 
-  <section class="card log-card">
+  <section class="card history-card" id="history-section">
     <div class="section-head">
-      <h2>Activity log</h2>
-      <button id="clear-log" type="button">Clear log</button>
+      <h2>History</h2>
+      <button id="clear-history" type="button">Clear history</button>
     </div>
-    <p class="muted small">Every click, mapped to the template call it mirrors.</p>
-    <ol id="log" class="log" aria-live="polite"></ol>
+    <p class="muted small history-note">Simulated history — demo hashes, no real chain. Select an entry to open its block.</p>
+    <ol id="history" class="history" aria-live="polite"></ol>
+  </section>
+
+  <details class="card disclosure" id="about">
+    <summary>
+      <span class="summary-title">About</span>
+      <span class="muted small">What this is · how it works</span>
+    </summary>
+    <h3>What this page is</h3>
+    <p>This page runs a faithful in-browser simulation of the
+    <code>CrowdfundCampaign</code> Rust template — same rules, same rejection messages.
+    Nothing here touches a network or a wallet.</p>
+
+    <h3>How it works</h3>
+    <ul class="detail-list how-grid">
+      <li><strong>One campaign = one component.</strong> <code>new(title, goal, deadline_epoch)</code> opens it; the caller becomes the creator.</li>
+      <li><strong>Escrow vault.</strong> <code>pledge(bucket)</code> deposits TARI into the campaign vault and records the backer in a ledger. Pledges accumulate; overfunding is allowed.</li>
+      <li><strong>Epoch deadline.</strong> Pledges are accepted while <code>current_epoch &lt; deadline_epoch</code>. At <code>current_epoch &gt;= deadline_epoch</code> the campaign settles — the boundary is tested both ways.</li>
+      <li><strong>Exactly one outcome.</strong> Goal met → <code>claim()</code> pays the whole vault to the creator, once. Goal missed → <code>refund()</code> repays each backer in full, once. The other path is rejected with a specific message.</li>
+      <li><strong>Events.</strong> <code>CampaignCreated</code>, <code>Pledged</code>, <code>Funded</code> (once, when the goal is first reached), <code>Claimed</code>, <code>Refunded</code> — indexable by explorers.</li>
+      <li><strong>Access rules.</strong> Methods are callable by anyone; authorization is enforced in code by comparing the transaction signer to the recorded creator/pledge keys. The template creates no resource, so there are no owner-bypassable resource rules.</li>
+    </ul>
+
+    <h3>Live mode</h3>
+    <p>What live mode would need: a published template address on Esmeralda/mainnet, the
+    <code>window.tari</code> provider (Sapient extension or Tari Universe web wallet), and indexer reads for
+    campaign discovery. None of that is configured here, so this demo stays in simulation. The stub code
+    in <code>live.js</code> only detects a wallet and reports status — it never prompts, never signs, and
+    never submits a transaction.</p>
+
+    <p class="muted small">Build and test commands, stretch ideas, and the full honest-limits list live in the
+    <a href="https://github.com/Yogii123-qw/ootle-crowdfund">README</a>.</p>
+  </details>
+
+  <section class="proof-section" id="proof" aria-label="Proof">
+    <div class="section-head">
+      <h2>Proof</h2>
+    </div>
+    <div class="proof-grid">
+      <div class="proof-card">
+        <p class="proof-num">15 / 15</p>
+        <p class="proof-label">engine tests</p>
+        <p class="proof-sub muted small">Real Ootle engine, in-process</p>
+      </div>
+      <div class="proof-card">
+        <p class="proof-num">14 / 14</p>
+        <p class="proof-label">parity checks</p>
+        <p class="proof-sub muted small">Simulation matches the template</p>
+      </div>
+      <div class="proof-card">
+        <p class="proof-num">140,088 <span class="proof-unit">bytes</span></p>
+        <p class="proof-label">WASM template</p>
+        <p class="proof-sub muted small">13.4% of the 1 MiB cap</p>
+      </div>
+    </div>
+    <div class="card proof-commands">
+      <h3>Run it yourself</h3>
+      <pre><code>cargo test
+node --test app/sim.test.mjs
+cargo clippy --all-targets</code></pre>
+      <p class="proof-links">
+        <a href="https://github.com/Yogii123-qw/ootle-crowdfund">Source code &amp; README ↗</a>
+        <a href="https://community.tari.com/t/november-build-contest-thread-mvp/520/17">Contest entry, post #17 ↗</a>
+      </p>
+    </div>
   </section>
 
   <details class="card disclosure" id="walkthrough">
@@ -109,8 +222,7 @@
       <span class="summary-title">Guided walkthrough <span class="muted">— about 2 minutes</span></span>
       <span class="steps-progress"><span id="walkthrough-count">0 / 9</span> steps complete</span>
     </summary>
-    <p>Follow the steps. Each one ticks itself off as you do it. Rejections are part of the demo —
-    they prove the template says <em>no</em> exactly when it should.</p>
+    <p>Nine steps. Each ticks itself off as you do it — including the rejections.</p>
     <ol class="steps">
       <li data-step="pledge-bima">Pledge <strong>400</strong> as <strong>Bima</strong> on <em>Community radio</em>.</li>
       <li data-step="pledge-sari">Switch to <strong>Sari</strong> and pledge <strong>600</strong> on <em>Community radio</em> — the goal fills and the <code>Funded</code> event fires.</li>
@@ -122,27 +234,14 @@
       <li data-step="double-refund">Refund the same pledge again — it must be <em>rejected</em> (double refund).</li>
       <li data-step="refund-after-success">Try refunding <em>Community radio</em> — it must be <em>rejected</em> (refunds closed after success).</li>
     </ol>
-    <p class="muted small">Tip: switch the active persona with the “Acting as” control. The active persona is the transaction signer — the template checks it on every call.</p>
   </details>
-
-  <section class="how">
-    <h2>How it works</h2>
-    <ul class="features">
-      <li><strong>One campaign = one component.</strong> <code>new(title, goal, deadline_epoch)</code> opens it; the caller becomes the creator.</li>
-      <li><strong>Escrow vault.</strong> <code>pledge(bucket)</code> deposits TARI into the campaign vault and records the backer in a ledger. Pledges accumulate; overfunding is allowed.</li>
-      <li><strong>Epoch deadline.</strong> Pledges are accepted while <code>current_epoch &lt; deadline_epoch</code>. At <code>current_epoch &gt;= deadline_epoch</code> the campaign settles — the boundary is tested both ways.</li>
-      <li><strong>Exactly one outcome.</strong> Goal met → <code>claim()</code> pays the whole vault to the creator, once. Goal missed → <code>refund()</code> repays each backer in full, once. The other path is rejected with a specific message.</li>
-      <li><strong>Events.</strong> <code>CampaignCreated</code>, <code>Pledged</code>, <code>Funded</code> (once, when the goal is first reached), <code>Claimed</code>, <code>Refunded</code> — indexable by explorers.</li>
-      <li><strong>Access rules.</strong> Methods are callable by anyone; authorization is enforced in code by comparing the transaction signer to the recorded creator/pledge keys. The template creates no resource, so there are no owner-bypassable resource rules.</li>
-    </ul>
-  </section>
 
   <details class="card disclosure limits" id="limits">
     <summary>
-      <span class="summary-title">Honest limits</span>
-      <span class="muted small">Read before judging</span>
+      <span class="summary-title">Read before judging</span>
+      <span class="muted small">Honest limits</span>
     </summary>
-    <ul>
+    <ul class="detail-list">
       <li><strong>This page is a simulation.</strong> No template has been published to Esmeralda or mainnet, and no on-chain state exists. The simulation mirrors the template rules and is parity-tested (<code>node --test app/sim.test.mjs</code>); the template rules are proven against the real engine (<code>cargo test</code>, 15 tests).</li>
       <li><strong>Pledge amounts are public.</strong> Vault-based accounting means anyone can read who pledged how much. That is a deliberate v1 design choice, not an oversight. Hiding amounts would need a confidential/stealth design and is out of scope.</li>
       <li><strong>No partial refunds, no milestones, no platform fee.</strong> All-or-nothing, one claim, full refunds. Stretch ideas are listed in the README, not claimed here.</li>
@@ -152,22 +251,99 @@
   </details>
 
   <section class="live" id="live">
-    <h2>Live mode <span class="muted small">— stub, detection only</span></h2>
-    <p id="live-status">Checking for a Tari wallet…</p>
-    <p class="muted small">What live mode would need: a published template address on Esmeralda/mainnet, the
-    <code>window.tari</code> provider (Sapient extension or Tari Universe web wallet), and indexer reads for
-    campaign discovery. None of that is configured here, so this demo stays in simulation. The stub code
-    in <code>live.js</code> only detects a wallet and reports status — it never prompts, never signs, and
-    never submits a transaction.</p>
+    <p><strong>Live mode</strong> <span class="muted">— stub, detection only.</span> <span id="live-status">Checking for a Tari wallet…</span></p>
   </section>
 
   <footer class="muted small">
-    <p>Ootle Crowdfund — original code for the Tari November Build Contest (theme: MVP). MIT licensed.
-    Template: Rust + <code>tari_template_lib</code> 0.40.1. Simulation: dependency-free JavaScript.
-    See <code>README.md</code> for build/test commands and the full honest-limits list.</p>
+    <p>Ootle Crowdfund — original code for the Tari November Build Contest (theme: MVP). MIT licensed. Built on Tari Ootle. <a href="https://github.com/Yogii123-qw/ootle-crowdfund">Source &amp; docs</a>.</p>
   </footer>
 </main>
 
+<div class="modal-backdrop" id="block-modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="block-title">
+    <div class="modal-head">
+      <h2 id="block-title">Block</h2>
+      <button type="button" class="modal-close" id="block-close" aria-label="Close block details">×</button>
+    </div>
+    <p class="muted small modal-honest">Simulated block — demo data, no real chain.</p>
+    <div id="block-detail"></div>
+  </div>
+</div>
+
 <script type="module" src="app.js"></script>
+<script>
+/* Page chrome: splash screen, mobile menu, nav behavior, entry cards.
+ * None of this touches demo logic (app.js / sim.js / live.js own that);
+ * the entry cards drive the demo only through real clicks on the
+ * existing persona buttons. */
+(function () {
+  /* Splash: brief identity moment, then fully removed. Reduced motion
+   * skips it entirely; a hard timeout guarantees it can never trap
+   * the page. */
+  var splash = document.getElementById("splash");
+  if (splash) {
+    var remove = function () { if (splash.parentNode) splash.parentNode.removeChild(splash); };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { remove(); }
+    else {
+      var hide = function () {
+        splash.classList.add("splash-hidden");
+        setTimeout(remove, 500);
+      };
+      if (document.readyState === "complete") { setTimeout(hide, 900); }
+      else { window.addEventListener("load", function () { setTimeout(hide, 900); }); }
+      setTimeout(remove, 3000);
+    }
+  }
+
+  /* Mobile menu: toggle panel, Escape closes, choosing a section
+   * closes the panel. */
+  var menuBtn = document.getElementById("menu-btn");
+  var mobileNav = document.getElementById("mobilenav");
+  function setMenu(open) {
+    mobileNav.classList.toggle("open", open);
+    menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    menuBtn.classList.toggle("is-open", open);
+  }
+  menuBtn.addEventListener("click", function () {
+    setMenu(!mobileNav.classList.contains("open"));
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") setMenu(false);
+  });
+
+  /* Nav links: collapsed destinations open before the anchor jump, so
+   * the user lands on open content; the mobile panel closes. */
+  document.querySelectorAll("[data-nav]").forEach(function (link) {
+    link.addEventListener("click", function () {
+      var target = document.querySelector(link.getAttribute("href"));
+      if (target && target.tagName === "DETAILS") target.open = true;
+      setMenu(false);
+    });
+  });
+
+  /* Entry cards: real routing. Persona paths click the existing
+   * persona buttons (the demo's own handlers run); the tour opens
+   * the walkthrough. Every card scrolls its destination into view. */
+  var paths = {
+    create: { persona: "rani", target: "#create" },
+    back: { persona: "bima", target: "#campaigns-section" },
+    tour: { target: "#walkthrough", open: true }
+  };
+  document.querySelectorAll(".entry-card").forEach(function (card) {
+    card.addEventListener("click", function () {
+      var p = paths[card.dataset.path];
+      if (!p) return;
+      if (p.persona) {
+        var btn = document.querySelector('.persona-btn[data-persona="' + p.persona + '"]');
+        if (btn) btn.click();
+      }
+      var el = document.querySelector(p.target);
+      if (!el) return;
+      if (p.open && el.tagName === "DETAILS") el.open = true;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+})();
+</script>
 </body>
 </html>
