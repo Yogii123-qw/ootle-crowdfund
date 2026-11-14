@@ -173,6 +173,8 @@ function render() {
     // (creator, deadline, backers), .status, .status-note, .progress /
     // .progress-bar, .total, .goal, .mine, .amount, .pledge-btn,
     // .claim-btn, .refund-btn, .error. Restyle freely; do not rename.
+    // Button hierarchy (presentational only): Pledge is the single
+    // primary action; Claim and Refund are quiet outline buttons.
     card.innerHTML = `
       <div class="campaign-head">
         <div>
@@ -190,7 +192,7 @@ function render() {
       <div class="row">
         <label>Amount <input type="text" inputmode="numeric" class="amount" value="${defaultAmount ?? "400"}" aria-label="Pledge amount in TARI units"></label>
         <button type="button" class="pledge-btn btn-primary">Pledge</button>
-        <button type="button" class="claim-btn btn-success">Claim</button>
+        <button type="button" class="claim-btn">Claim</button>
         <button type="button" class="refund-btn">Refund</button>
       </div>
       <p class="error" role="alert" hidden></p>
