@@ -598,11 +598,31 @@ fn campaign_creation_validates_inputs() {
     );
     assert_reject_reason(reason, "Campaign title must not be empty");
 
+    // Title over the 120-character limit.
+    let reason = test.execute_expect_failure(
+        test.transaction()
+            .call_function(template, "new", args!["y".repeat(121), 100, 10])
+            .build_and_seal(&creator.key),
+        vec![creator.proof.clone()],
+    );
+    assert_reject_reason(reason, "Campaign title is too long");
+
     // No campaign component was created by any rejected transaction.
     assert!(
         test.read_only_state_store()
             .get_components_by_template_address(template)
             .unwrap()
             .is_empty()
+    );
+
+    // A title at exactly the 120-character limit is accepted (boundary).
+    let title_120 = "y".repeat(120);
+    let _campaign = create_campaign(&mut test, &creator, &title_120, 100, 10);
+    assert_eq!(
+        test.read_only_state_store()
+            .get_components_by_template_address(template)
+            .unwrap()
+            .len(),
+        1
     );
 }
