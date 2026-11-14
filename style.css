@@ -78,6 +78,7 @@ button {
   font-size: 0.95rem;
 }
 button:hover { filter: brightness(1.08); }
+button:disabled { background: var(--card-2); color: var(--muted); border: 1px solid var(--line); cursor: not-allowed; filter: none; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 .persona-btn { background: var(--card-2); color: var(--text); border: 1px solid var(--line); }
 .persona-btn.active { background: var(--accent-2); color: #231f00; border-color: var(--accent-2); }

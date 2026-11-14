@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ootle Crowdfund — all-or-nothing crowdfunding (simulation demo)</title>
 <meta name="description" content="All-or-nothing crowdfunding on Tari Ootle: goal met, the creator claims; goal missed, every backer refunds in full. Walletless browser simulation of the real Rust template.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%234cc38a'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='%2306281a' font-family='sans-serif' font-weight='bold'%3EO%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -27,11 +28,12 @@
     they prove the template says <em>no</em> exactly when it should.</p>
     <ol class="steps">
       <li data-step="pledge-bima">Pledge <strong>400</strong> as <strong>Bima</strong> on <em>Community radio</em>.</li>
-      <li data-step="pledge-sari">Pledge <strong>600</strong> as <strong>Sari</strong> on <em>Community radio</em> — watch the goal fill and the <code>Funded</code> event fire.</li>
-      <li data-step="early-claim">Try <strong>Claim</strong> as <strong>Rani</strong> before the deadline — it must be <em>rejected</em>.</li>
+      <li data-step="pledge-sari">Switch to <strong>Sari</strong> and pledge <strong>600</strong> on <em>Community radio</em> — the goal fills and the <code>Funded</code> event fires.</li>
+      <li data-step="pledge-mural">Pledge <strong>300</strong> as <strong>Bima</strong> on <em>Neighborhood mural</em>. Do this <em>before</em> advancing time: pledges close at the deadline. This campaign will miss its goal — that is what makes the refund steps below possible.</li>
+      <li data-step="early-claim">Switch to <strong>Rani</strong> and try <strong>Claim</strong> before the deadline — it must be <em>rejected</em> (too early).</li>
       <li data-step="advance">Advance the epoch to <strong>5</strong> (the deadline).</li>
       <li data-step="claim">Claim <em>Community radio</em> as <strong>Rani</strong> — the full vault pays out.</li>
-      <li data-step="refund">Pledge on <em>Neighborhood mural</em>, then <strong>Refund</strong> after the deadline — full repayment.</li>
+      <li data-step="refund">Switch to <strong>Bima</strong> and <strong>Refund</strong> <em>Neighborhood mural</em> — full repayment.</li>
       <li data-step="double-refund">Refund the same pledge again — it must be <em>rejected</em> (double refund).</li>
       <li data-step="refund-after-success">Try refunding <em>Community radio</em> — it must be <em>rejected</em> (refunds closed after success).</li>
     </ol>
