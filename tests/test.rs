@@ -4,7 +4,9 @@
 // a passing test means the engine accepted the transaction. No network,
 // funds, or faucet is involved. Epochs are overridden with virtual substates.
 
-use tari_template_lib::types::{Amount, ComponentAddress, NonFungibleAddress, constants::TARI_TOKEN};
+use tari_template_lib::types::{
+    Amount, ComponentAddress, NonFungibleAddress, constants::TARI_TOKEN,
+};
 use tari_template_test_tooling::{
     TemplateTest,
     crypto::RistrettoSecretKey,
@@ -27,7 +29,11 @@ struct Actor {
 
 fn new_actor(test: &mut TemplateTest) -> Actor {
     let (account, proof, key) = test.create_funded_account();
-    Actor { account, proof, key }
+    Actor {
+        account,
+        proof,
+        key,
+    }
 }
 
 fn set_epoch(test: &mut TemplateTest, epoch: u64) {
@@ -115,7 +121,11 @@ fn refund(test: &mut TemplateTest, campaign: ComponentAddress, actor: &Actor) ->
 }
 
 fn has_event(result: &ExecuteResult, topic: &str) -> bool {
-    result.finalize.events.iter().any(|event| event.topic() == topic)
+    result
+        .finalize
+        .events
+        .iter()
+        .any(|event| event.topic() == topic)
 }
 
 fn my_pledge(test: &mut TemplateTest, campaign: ComponentAddress, actor: &Actor) -> Amount {
@@ -137,7 +147,11 @@ fn campaign_creation_records_state_and_emits_event() {
     // can be compared exactly against the harness public key bytes.
     let result = test.execute_expect_success(
         test.transaction()
-            .call_function(template, "new", args!["Fund the community radio".to_string(), 1_000, 10])
+            .call_function(
+                template,
+                "new",
+                args!["Fund the community radio".to_string(), 1_000, 10],
+            )
             .build_and_seal(test.secret_key()),
         vec![test.owner_proof()],
     );
@@ -149,14 +163,20 @@ fn campaign_creation_records_state_and_emits_event() {
         .unwrap()
         .remove(0);
 
-    assert_eq!(test.call_method::<Amount>(campaign, "goal", args![], vec![]), Amount::from(1_000));
-    assert_eq!(test.call_method::<u64>(campaign, "deadline_epoch", args![], vec![]), 10);
+    assert_eq!(
+        test.call_method::<Amount>(campaign, "goal", args![], vec![]),
+        Amount::from(1_000u64)
+    );
+    assert_eq!(
+        test.call_method::<u64>(campaign, "deadline_epoch", args![], vec![]),
+        10
+    );
     assert_eq!(
         test.call_method::<String>(campaign, "title", args![], vec![]),
         "Fund the community radio"
     );
     assert_eq!(
-        test.call_method::<tari_template_lib::types::RistrettoPublicKeyBytes>(
+        test.call_method::<tari_template_lib::prelude::RistrettoPublicKeyBytes>(
             campaign,
             "creator",
             args![],
@@ -168,7 +188,10 @@ fn campaign_creation_records_state_and_emits_event() {
         test.call_method::<Amount>(campaign, "total_pledged", args![], vec![]),
         Amount::zero()
     );
-    assert_eq!(test.call_method::<u64>(campaign, "pledge_count", args![], vec![]), 0);
+    assert_eq!(
+        test.call_method::<u64>(campaign, "pledge_count", args![], vec![]),
+        0
+    );
     assert!(!test.call_method::<bool>(campaign, "is_claimed", args![], vec![]));
     assert!(!test.call_method::<bool>(campaign, "is_funded", args![], vec![]));
     assert_eq!(campaign_vault_balance(&test, campaign), Amount::zero());
@@ -187,32 +210,44 @@ fn pledges_accumulate_and_funding_event_fires_once() {
     let result = pledge(&mut test, campaign, &alice, 400);
     assert!(has_event(&result, "CrowdfundCampaign.Pledged"));
     assert!(!has_event(&result, "CrowdfundCampaign.Funded"));
-    assert_eq!(account_tari_balance(&test, alice.account), alice_before - Amount::from(400));
-    assert_eq!(my_pledge(&mut test, campaign, &alice), Amount::from(400));
+    assert_eq!(
+        account_tari_balance(&test, alice.account),
+        alice_before - Amount::from(400u64)
+    );
+    assert_eq!(my_pledge(&mut test, campaign, &alice), Amount::from(400u64));
     assert_eq!(
         test.call_method::<Amount>(campaign, "total_pledged", args![], vec![]),
-        Amount::from(400)
+        Amount::from(400u64)
     );
 
     // Bob's pledge reaches the goal exactly: the Funded event fires.
     let result = pledge(&mut test, campaign, &bob, 600);
     assert!(has_event(&result, "CrowdfundCampaign.Funded"));
     assert!(test.call_method::<bool>(campaign, "is_funded", args![], vec![]));
-    assert_eq!(test.call_method::<u64>(campaign, "pledge_count", args![], vec![]), 2);
+    assert_eq!(
+        test.call_method::<u64>(campaign, "pledge_count", args![], vec![]),
+        2
+    );
 
     // Alice pledges again: amounts accumulate per backer, backer count stays
     // at 2, and the Funded event does NOT fire a second time. Overfunding is
     // allowed: the total may exceed the goal.
     let result = pledge(&mut test, campaign, &alice, 100);
     assert!(!has_event(&result, "CrowdfundCampaign.Funded"));
-    assert_eq!(my_pledge(&mut test, campaign, &alice), Amount::from(500));
-    assert_eq!(my_pledge(&mut test, campaign, &bob), Amount::from(600));
-    assert_eq!(test.call_method::<u64>(campaign, "pledge_count", args![], vec![]), 2);
+    assert_eq!(my_pledge(&mut test, campaign, &alice), Amount::from(500u64));
+    assert_eq!(my_pledge(&mut test, campaign, &bob), Amount::from(600u64));
+    assert_eq!(
+        test.call_method::<u64>(campaign, "pledge_count", args![], vec![]),
+        2
+    );
     assert_eq!(
         test.call_method::<Amount>(campaign, "total_pledged", args![], vec![]),
-        Amount::from(1_100)
+        Amount::from(1_100u64)
     );
-    assert_eq!(campaign_vault_balance(&test, campaign), Amount::from(1_100));
+    assert_eq!(
+        campaign_vault_balance(&test, campaign),
+        Amount::from(1_100u64)
+    );
 }
 
 #[test]
@@ -227,7 +262,7 @@ fn pledge_at_deadline_boundary() {
     pledge(&mut test, campaign, &alice, 100);
     assert_eq!(
         test.call_method::<Amount>(campaign, "total_pledged", args![], vec![]),
-        Amount::from(100)
+        Amount::from(100u64)
     );
 
     // Epoch 5 == deadline: pledging is closed, and the rejection commits
@@ -244,9 +279,12 @@ fn pledge_at_deadline_boundary() {
     assert_reject_reason(reason, "Campaign deadline has passed");
     assert_eq!(
         test.call_method::<Amount>(campaign, "total_pledged", args![], vec![]),
-        Amount::from(100)
+        Amount::from(100u64)
     );
-    assert_eq!(campaign_vault_balance(&test, campaign), Amount::from(100));
+    assert_eq!(
+        campaign_vault_balance(&test, campaign),
+        Amount::from(100u64)
+    );
 }
 
 #[test]
@@ -267,7 +305,10 @@ fn early_claim_is_rejected() {
         vec![creator.proof.clone()],
     );
     assert_reject_reason(reason, "Campaign deadline has not been reached");
-    assert_eq!(campaign_vault_balance(&test, campaign), Amount::from(500));
+    assert_eq!(
+        campaign_vault_balance(&test, campaign),
+        Amount::from(500u64)
+    );
     assert!(!test.call_method::<bool>(campaign, "is_claimed", args![], vec![]));
 }
 
@@ -289,7 +330,10 @@ fn claim_by_non_creator_is_rejected() {
         vec![alice.proof.clone()],
     );
     assert_reject_reason(reason, "Only the campaign creator can claim the funds");
-    assert_eq!(campaign_vault_balance(&test, campaign), Amount::from(500));
+    assert_eq!(
+        campaign_vault_balance(&test, campaign),
+        Amount::from(500u64)
+    );
 }
 
 #[test]
@@ -308,7 +352,7 @@ fn claim_on_success_pays_creator_exactly_once() {
     assert!(has_event(&result, "CrowdfundCampaign.Claimed"));
     assert_eq!(
         account_tari_balance(&test, creator.account),
-        creator_before + Amount::from(1_000)
+        creator_before + Amount::from(1_000u64)
     );
     assert_eq!(campaign_vault_balance(&test, campaign), Amount::zero());
     assert!(test.call_method::<bool>(campaign, "is_claimed", args![], vec![]));
@@ -325,7 +369,7 @@ fn claim_on_success_pays_creator_exactly_once() {
     assert_reject_reason(reason, "Campaign funds have already been claimed");
     assert_eq!(
         account_tari_balance(&test, creator.account),
-        creator_before + Amount::from(1_000)
+        creator_before + Amount::from(1_000u64)
     );
 }
 
@@ -347,7 +391,10 @@ fn claim_when_goal_missed_is_rejected() {
         vec![creator.proof.clone()],
     );
     assert_reject_reason(reason, "Funding goal was not met");
-    assert_eq!(campaign_vault_balance(&test, campaign), Amount::from(500));
+    assert_eq!(
+        campaign_vault_balance(&test, campaign),
+        Amount::from(500u64)
+    );
 }
 
 #[test]
@@ -379,12 +426,18 @@ fn refunds_on_failure_repay_every_backer_in_full() {
     let result = refund(&mut test, campaign, &alice);
     assert!(has_event(&result, "CrowdfundCampaign.Refunded"));
     assert_eq!(account_tari_balance(&test, alice.account), alice_initial);
-    assert_eq!(campaign_vault_balance(&test, campaign), Amount::from(400));
+    assert_eq!(
+        campaign_vault_balance(&test, campaign),
+        Amount::from(400u64)
+    );
 
     refund(&mut test, campaign, &bob);
     assert_eq!(account_tari_balance(&test, bob.account), bob_initial);
     assert_eq!(campaign_vault_balance(&test, campaign), Amount::zero());
-    assert_eq!(test.call_method::<u64>(campaign, "pledge_count", args![], vec![]), 0);
+    assert_eq!(
+        test.call_method::<u64>(campaign, "pledge_count", args![], vec![]),
+        0
+    );
     assert!(!test.call_method::<bool>(campaign, "is_claimed", args![], vec![]));
 }
 
@@ -409,7 +462,10 @@ fn double_refund_is_rejected() {
         vec![alice.proof.clone()],
     );
     assert_reject_reason(reason, "No pledge to refund for this backer");
-    assert_eq!(account_tari_balance(&test, alice.account), balance_after_first);
+    assert_eq!(
+        account_tari_balance(&test, alice.account),
+        balance_after_first
+    );
     assert_eq!(campaign_vault_balance(&test, campaign), Amount::zero());
 }
 
@@ -464,7 +520,10 @@ fn refund_before_deadline_is_rejected() {
         vec![alice.proof.clone()],
     );
     assert_reject_reason(reason, "Refunds open after the campaign deadline");
-    assert_eq!(campaign_vault_balance(&test, campaign), Amount::from(300));
+    assert_eq!(
+        campaign_vault_balance(&test, campaign),
+        Amount::from(300u64)
+    );
 }
 
 #[test]
@@ -501,9 +560,10 @@ fn campaign_creation_validates_inputs() {
     assert_reject_reason(reason, "Campaign title must not be empty");
 
     // No campaign component was created by any rejected transaction.
-    assert!(test
-        .read_only_state_store()
-        .get_components_by_template_address(template)
-        .unwrap()
-        .is_empty());
+    assert!(
+        test.read_only_state_store()
+            .get_components_by_template_address(template)
+            .unwrap()
+            .is_empty()
+    );
 }

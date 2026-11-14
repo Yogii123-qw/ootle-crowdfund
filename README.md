@@ -70,7 +70,7 @@ the total first reaches the goal), `Claimed`, `Refunded`.
 - **Overfunding is allowed.** The total may exceed the goal; the creator claims
   everything pledged. This is tested, not accidental.
 - **Small on purpose.** One component, one vault, one map. The release WASM is
-  well under the 1 MiB cap (see Verification).
+  136.8 KiB, well under the 1 MiB cap (see Verification).
 
 ## Build + test the template
 
@@ -128,6 +128,32 @@ node --test app/sim.test.mjs
 14 tests, no dependencies (Node ≥ 20). The UI wiring (real `index.html` +
 `app.js`, full walkthrough clicks) was additionally verified with a jsdom
 harness during development; that harness is dev-only and not shipped.
+
+## Verification (as built 2026-11-15, Rust 1.100.0, Node 24)
+
+```text
+$ cargo test
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured
+  (plus 0 lib/doc tests; the 12 engine tests run the real engine in-process)
+
+$ node --test app/sim.test.mjs
+tests 14, pass 14, fail 0
+
+$ cargo build --target wasm32-unknown-unknown --release
+tari_crowdfund.wasm: 140,088 bytes (136.8 KiB, 13.4% of the 1 MiB cap)
+
+$ cargo clippy --all-targets
+clean — no warnings for this crate
+
+$ cargo fmt --check
+clean
+```
+
+The demo page was also served locally (`python3 -m http.server`) and exercised
+end-to-end in a DOM harness: initial render, both pledges, the `Funded` event,
+early-claim rejection, epoch advance, claim payout, refund, double-refund
+rejection, refund-after-success rejection, and the create-campaign form
+(including its zero-goal rejection) — all assertions passed.
 
 ## Project structure
 

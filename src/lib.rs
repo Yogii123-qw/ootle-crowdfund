@@ -69,12 +69,12 @@ mod crowdfund {
                 title.chars().count() <= MAX_TITLE_CHARS,
                 "Campaign title is too long"
             );
-            assert!(goal > Amount::zero(), "Funding goal must be greater than zero");
-            let now = Consensus::current_epoch();
             assert!(
-                deadline_epoch > now,
-                "Deadline epoch must be in the future"
+                goal > Amount::zero(),
+                "Funding goal must be greater than zero"
             );
+            let now = Consensus::current_epoch();
+            assert!(deadline_epoch > now, "Deadline epoch must be in the future");
 
             let creator = CallerContext::transaction_signer_public_key();
 
@@ -147,7 +147,11 @@ mod crowdfund {
             assert!(!self.claimed, "Campaign funds have already been claimed");
 
             let backer = CallerContext::transaction_signer_public_key();
-            let previous = self.pledges.get(&backer).copied().unwrap_or_else(Amount::zero);
+            let previous = self
+                .pledges
+                .get(&backer)
+                .copied()
+                .unwrap_or_else(Amount::zero);
             self.pledges.insert(backer, previous + amount);
             self.vault.deposit(payment);
 
@@ -183,7 +187,10 @@ mod crowdfund {
         /// claimed, the deadline has not been reached, or the goal was missed.
         pub fn claim(&mut self) -> Bucket {
             let caller = CallerContext::transaction_signer_public_key();
-            assert_eq!(caller, self.creator, "Only the campaign creator can claim the funds");
+            assert_eq!(
+                caller, self.creator,
+                "Only the campaign creator can claim the funds"
+            );
             assert!(!self.claimed, "Campaign funds have already been claimed");
             assert!(
                 Consensus::current_epoch() >= self.deadline_epoch,
@@ -287,7 +294,10 @@ mod crowdfund {
         /// The caller's own total pledge (zero if they never pledged).
         pub fn my_pledge(&self) -> Amount {
             let caller = CallerContext::transaction_signer_public_key();
-            self.pledges.get(&caller).copied().unwrap_or_else(Amount::zero)
+            self.pledges
+                .get(&caller)
+                .copied()
+                .unwrap_or_else(Amount::zero)
         }
     }
 }
