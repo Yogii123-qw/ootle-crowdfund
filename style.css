@@ -523,6 +523,9 @@ input::placeholder { color: var(--secondary); }
 .status[data-state="settled-funded"]::before { background: var(--ok); }
 .status[data-state="settled-failed"]::before { background: var(--bad); }
 .status[data-state="claimed"]::before { background: var(--ok); }
+.status[data-state="completed"]::before { background: var(--ok); }
+.status[data-state="vetoed"]::before { background: var(--bad); }
+.status[data-state="abandoned"]::before { background: var(--warn); }
 
 .status-note { margin: 8px 0 0; font-size: 0.92rem; }
 
@@ -552,6 +555,38 @@ input::placeholder { color: var(--secondary); }
 
 .mine-line { margin: 14px 0 0; font-size: 0.95rem; color: var(--secondary); }
 .mine-line strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* v2 mechanism lines: same quiet secondary voice as .mine-line, no new
+ * colors. The promise is the creator's words; the bond line states the
+ * locked amount and its state; the veto line shows the live tally. */
+.promise { margin: 16px 0 0; font-size: 0.95rem; color: var(--text); overflow-wrap: anywhere; }
+.promise-label { font-weight: 650; color: var(--ink); }
+.promise-note { margin: 2px 0 0; }
+.bond-line { margin: 12px 0 0; font-size: 0.95rem; color: var(--secondary); }
+.bond-line strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.veto-line { margin: 12px 0 0; font-size: 0.95rem; color: var(--secondary); }
+.veto-line strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* Tranche progress: one quiet line plus three segments. Segment state
+ * is carried by the state word and a restrained fill/border — the text
+ * alone states the meaning, color only reinforces it. */
+.tranches { margin-top: 14px; }
+.tranche-line { margin: 0 0 8px; }
+.tranche-segs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.seg {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: grid;
+  gap: 1px;
+  background: var(--surface);
+  min-width: 0;
+}
+.seg-amt { font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
+.seg-meta, .seg-state { font-size: 0.78rem; line-height: 1.35; color: var(--secondary); }
+.seg-released { background: var(--accent-soft); border-color: var(--line-strong); }
+.seg-pending { border-color: var(--accent); }
+.seg-frozen, .seg-closed { background: var(--surface-2); }
 
 .campaign .row { margin-top: 20px; }
 /* The label grows into the row's slack so the balance hint below the
@@ -591,6 +626,20 @@ input::placeholder { color: var(--secondary); }
   gap: 16px;
   align-items: end;
   margin-top: 14px;
+}
+
+/* The promise field spans the full row under title/goal/deadline; the
+ * submit button is pinned to the first row so the v1 layout is kept. */
+.field-promise { grid-column: 1 / -1; }
+#create-form button[type="submit"] { grid-column: 4; grid-row: 1; }
+
+/* Bond hint: same quiet voice as the goal hint. Appears as soon as the
+ * goal parses, so the cost of creating is visible before committing. */
+.bond-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--secondary);
 }
 
 /* Goal hint: quiet, full-width, never an error. Appears only when the
@@ -647,7 +696,7 @@ input::placeholder { color: var(--secondary); }
 .hist-main { display: grid; gap: 3px; min-width: 0; }
 .hist-title { font-weight: 650; color: var(--ink); font-size: 0.98rem; }
 .hist-meta { font-size: 0.86rem; color: var(--secondary); }
-.hist-hash { font-family: var(--mono); font-size: 0.84rem; }
+.hist-hash { font-family: var(--mono); font-size: 0.84rem; white-space: nowrap; }
 .hist-error { font-size: 0.86rem; color: var(--error-text); overflow-wrap: anywhere; }
 .hist-side { display: grid; justify-items: end; gap: 3px; flex: none; }
 .hist-amount { font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -916,6 +965,7 @@ footer p { margin: 0; }
   .ws-group:nth-child(3), .ws-group:nth-child(4) { border-top: 1px solid var(--line); padding-top: 24px; }
   #create-form { grid-template-columns: 1fr 1fr; }
   #create-form .field-title { grid-column: 1 / -1; }
+  #create-form button[type="submit"] { grid-column: 1 / -1; grid-row: auto; justify-self: start; }
   .entry-cards { grid-template-columns: 1fr; }
   .proof-grid { grid-template-columns: 1fr; }
 }
