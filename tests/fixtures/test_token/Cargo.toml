@@ -1,0 +1,21 @@
+# Test-only fixture template (NOT part of the contest entry).
+#
+# Exists for one purpose: letting the engine tests in `tests/test.rs` pay the
+# campaign with a resource that is not TARI, so the template's
+# "Pledges must be paid in TARI" rejection is proven against the real engine
+# instead of merely asserted in code. It is never published, never referenced
+# by the demo, and creates no state outside the in-process test engine.
+#
+# Pinned to the same `tari_template_lib` version as the entry template so the
+# two WASM modules run against identical engine types.
+
+[package]
+name = "test_token"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tari_template_lib = { version = "=0.40.1" }
+
+[lib]
+crate-type = ["cdylib"]

@@ -527,6 +527,45 @@ fn refund_before_deadline_is_rejected() {
 }
 
 #[test]
+fn pledge_with_non_tari_token_is_rejected() {
+    // This test loads a second, test-only template (tests/fixtures/test_token)
+    // whose `mint` function creates a fresh public fungible token. Paying the
+    // campaign with that token must be rejected: pledges are TARI-only.
+    let mut test = TemplateTest::new(".", [".", "tests/fixtures/test_token"]);
+    let creator = new_actor(&mut test);
+    let alice = new_actor(&mut test);
+    let campaign = create_campaign(&mut test, &creator, "TARI only", 1_000, 10);
+
+    let token_template = test.get_template_address("TestTokenMinter");
+    let reason = test.execute_expect_failure(
+        test.transaction()
+            .call_function(token_template, "mint", args![100u64])
+            .put_last_instruction_output_on_workspace("funds")
+            .call_method(campaign, "pledge", args![Workspace("funds")])
+            .build_and_seal(&alice.key),
+        vec![alice.proof.clone()],
+    );
+    assert_reject_reason(reason, "Pledges must be paid in TARI");
+
+    // The rejection commits nothing: no pledge recorded, vault still empty,
+    // and a later TARI pledge from the same backer still works.
+    assert_eq!(
+        test.call_method::<Amount>(campaign, "total_pledged", args![], vec![]),
+        Amount::zero()
+    );
+    assert_eq!(campaign_vault_balance(&test, campaign), Amount::zero());
+    assert_eq!(
+        test.call_method::<u64>(campaign, "pledge_count", args![], vec![]),
+        0
+    );
+    pledge(&mut test, campaign, &alice, 100);
+    assert_eq!(
+        test.call_method::<Amount>(campaign, "total_pledged", args![], vec![]),
+        Amount::from(100u64)
+    );
+}
+
+#[test]
 fn campaign_creation_validates_inputs() {
     let mut test = TemplateTest::my_crate();
     let creator = new_actor(&mut test);
