@@ -417,14 +417,24 @@ function render() {
   for (const { id, sim, defaultAmount } of state.campaigns) {
     const mine = sim.pledgeOf(state.activePersona);
     const pct = sim.goal > 0n ? Number((sim.totalPledged * 100n) / sim.goal) : 0;
+    // Contextual primary (presentational only): the filled button marks
+    // whichever action is currently meaningful, from visible state alone.
+    // Nothing is ever disabled — rejections stay clickable and recorded,
+    // because they demonstrate the template rules. Pledge is the fallback
+    // so a card never has zero primaries or two.
+    const status = sim.status(state.epoch);
+    let primary = "pledge";
+    if (status === "settled-funded" && state.activePersona === sim.creator) primary = "claim";
+    else if (status === "settled-failed" && sim.pledgeOf(state.activePersona) > 0n) primary = "refund";
+    const balanceHint = `${PERSONAS[state.activePersona].name} holds ${formatAmount(state.wallets.get(state.activePersona))} TARI`;
     const card = document.createElement("article");
     card.className = "card campaign";
     // Markup hooks this template must keep: h3, p.muted > 3 strongs
     // (creator, deadline, backers), .status, .status-note, .progress /
-    // .progress-bar, .total, .goal, .mine, .amount, .pledge-btn,
-    // .claim-btn, .refund-btn, .error. Restyle freely; do not rename.
-    // Button hierarchy (presentational only): Pledge is the single
-    // primary action; Claim and Refund are quiet outline buttons.
+    // .progress-bar, .total, .goal, .mine, .amount, .balance-hint,
+    // .pledge-btn, .claim-btn, .refund-btn, .error. Restyle freely; do
+    // not rename. Exactly one of the three action buttons carries
+    // .btn-primary at a time (see `primary` above).
     card.innerHTML = `
       <div class="campaign-head">
         <div>
@@ -440,10 +450,10 @@ function render() {
       </div>
       <p class="mine-line">Your pledge (${PERSONAS[state.activePersona].name}): <strong class="mine"></strong> TARI</p>
       <div class="row">
-        <label>Amount <input type="text" inputmode="numeric" class="amount" value="${defaultAmount ?? "400"}" aria-label="Pledge amount in TARI units"></label>
-        <button type="button" class="pledge-btn btn-primary">Pledge</button>
-        <button type="button" class="claim-btn">Claim</button>
-        <button type="button" class="refund-btn">Refund</button>
+        <label>Amount <input type="text" inputmode="numeric" class="amount" value="${defaultAmount ?? "400"}" aria-label="Pledge amount in TARI units"><span class="balance-hint">${balanceHint}</span></label>
+        <button type="button" class="pledge-btn${primary === "pledge" ? " btn-primary" : ""}">Pledge</button>
+        <button type="button" class="claim-btn${primary === "claim" ? " btn-primary" : ""}">Claim</button>
+        <button type="button" class="refund-btn${primary === "refund" ? " btn-primary" : ""}">Refund</button>
       </div>
       <p class="error" role="alert" hidden></p>
     `;
@@ -498,8 +508,14 @@ function doPledge(campaignId, rawAmount, showError) {
     `pledge(Bucket ${formatAmount(amount)} TARI) on “${entry.sim.title}” — signer: ${PERSONAS[persona].name}, epoch ${state.epoch}`;
   // Wallet-side check (mirrors the account withdraw in a real transaction):
   // the signer cannot pledge more demo units than their wallet holds.
+  // The message names the actual balance and the next step, so the
+  // rejection teaches instead of dead-ending.
   if (amount > state.wallets.get(persona)) {
-    const message = "Insufficient demo balance — the wallet cannot withdraw more than it holds (wallet-side check, not a template rule).";
+    const balance = state.wallets.get(persona);
+    const guidance = balance > 0n
+      ? `pledge ${formatAmount(balance)} or less, or switch persona and pledge the rest`
+      : "switch persona to pledge from another wallet";
+    const message = `${PERSONAS[persona].name} holds ${formatAmount(balance)} TARI — ${guidance} (wallet-side check, not a template rule).`;
     showError(message);
     recordHistory({
       type: "Pledge", actor: persona, campaignId, campaignTitle: entry.sim.title,
@@ -635,6 +651,24 @@ function init() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeBlock();
   });
+  // Quiet goal hint: the three demo wallets hold a fixed total, so a
+  // goal above it can never be funded in this demo. A hint only — it
+  // never blocks creation.
+  const totalDemoBalance = STARTING_BALANCE * BigInt(Object.keys(PERSONAS).length);
+  const goalHint = el("goal-hint");
+  goalHint.textContent =
+    `Demo wallets hold ${formatAmount(totalDemoBalance)} TARI in total — a larger goal can never be funded in this demo.`;
+  const updateGoalHint = () => {
+    let goal;
+    try {
+      goal = parseAmount(el("new-goal").value);
+    } catch {
+      goalHint.hidden = true;
+      return;
+    }
+    goalHint.hidden = goal <= totalDemoBalance;
+  };
+  el("new-goal").addEventListener("input", updateGoalHint);
   el("create-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const errorBox = el("create-error");
@@ -669,6 +703,7 @@ function init() {
       });
       event.target.reset();
       el("new-deadline").value = "5";
+      updateGoalHint();
     } catch (err) {
       errorBox.textContent = err.message;
       errorBox.hidden = false;

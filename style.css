@@ -554,8 +554,23 @@ input::placeholder { color: var(--secondary); }
 .mine-line strong { color: var(--ink); font-variant-numeric: tabular-nums; }
 
 .campaign .row { margin-top: 20px; }
-.campaign .row label { flex: 0 0 118px; }
+/* The label grows into the row's slack so the balance hint below the
+ * input stays on one line; the buttons keep their natural width. */
+.campaign .row label { flex: 1 0 118px; }
 .campaign .row input.amount { width: 100%; }
+
+/* Balance hint under each Amount field: the acting persona's demo
+ * balance, shown where the pledge decision is made — the workspace
+ * wallets sit far above the cards on mobile. Quiet secondary text;
+ * the same pair as .muted on white, already AA-verified. */
+.balance-hint {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  font-weight: 400;
+  color: var(--secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 .error {
   color: var(--error-text);
@@ -576,6 +591,15 @@ input::placeholder { color: var(--secondary); }
   gap: 16px;
   align-items: end;
   margin-top: 14px;
+}
+
+/* Goal hint: quiet, full-width, never an error. Appears only when the
+ * entered goal exceeds the demo wallets' combined balance. */
+.goal-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--secondary);
 }
 
 /* ---------- Transaction history ---------- */
