@@ -1,10 +1,16 @@
 // Demo harness: wires the CrowdfundSim state machine (sim.js) to the page.
 //
 // This file owns ONLY demo concerns: persona wallets, the epoch control,
-// rendering, the activity log, and the walkthrough checklist. Every funding
+// rendering, the transaction history (with deterministic simulated hashes
+// and the in-app block view), and the walkthrough checklist. Every funding
 // rule lives in sim.js, which mirrors the Rust template. Wallet balances
 // here play the role test accounts play in the engine tests: a pledge
 // deducts from the signer's demo wallet, a claim/refund credits it back.
+//
+// History honesty: every entry records a real simulated call made through
+// sim.js. Hashes are deterministic FNV-1a digests of the call data — the
+// same action sequence always yields the same hashes — and are labeled
+// everywhere as simulated. Nothing here touches a real chain.
 
 import { CrowdfundSim, parseAmount, formatAmount } from "./sim.js";
 import { liveStatus } from "./live.js";
@@ -26,6 +32,10 @@ const state = {
   // a genuine double-refund apart from a refund attempt by someone who never
   // pledged — both are rejected with the same message.
   refunded: new Set(),
+  // Simulated transaction history, newest first. seq restarts on reset, so
+  // the same action sequence always produces the same hashes.
+  history: [],
+  seq: 0,
 };
 
 const WALKTHROUGH_STEPS = [
@@ -46,6 +56,8 @@ function freshDemo() {
   state.wallets = new Map(Object.keys(PERSONAS).map((id) => [id, STARTING_BALANCE]));
   state.progress = {};
   state.refunded = new Set();
+  state.history = [];
+  state.seq = 0;
   state.campaigns = [
     {
       id: "c1",
@@ -78,26 +90,260 @@ function el(id) {
   return document.getElementById(id);
 }
 
-function logCall(text) {
-  const li = document.createElement("li");
-  li.className = "call";
-  li.textContent = `→ ${text}`;
-  el("log").prepend(li);
+// --- Deterministic simulated hashes -------------------------------------
+//
+// FNV-1a 64-bit, run twice with different seeds and concatenated, giving a
+// 32-hex-character digest. Synchronous, dependency-free, and stable across
+// runs: the same call data always yields the same hash. This is a demo
+// fingerprint, not a cryptographic hash — it is labeled simulated.
+
+function fnv1a64(text, seed) {
+  let hash = seed;
+  const prime = 0x100000001b3n;
+  const mask = (1n << 64n) - 1n;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= BigInt(text.charCodeAt(i));
+    hash = (hash * prime) & mask;
+  }
+  return hash.toString(16).padStart(16, "0");
 }
 
-function logOk(text) {
-  const li = document.createElement("li");
-  li.className = "ok";
-  li.textContent = `✓ ${text}`;
-  el("log").prepend(li);
+function simHash(text) {
+  const offset = 0xcbf29ce484222325n;
+  return `0x${fnv1a64(text, offset)}${fnv1a64(text, offset ^ 0xa5a5a5a5a5a5a5a5n)}`;
 }
 
-function logReject(message) {
-  const li = document.createElement("li");
-  li.className = "reject";
-  li.textContent = `✗ Rejected: “${message}” — nothing was committed.`;
-  el("log").prepend(li);
+function shortHash(hash) {
+  return `${hash.slice(0, 10)}…`;
 }
+
+// --- Transaction history -------------------------------------------------
+
+function recordHistory({ type, actor, campaignId, campaignTitle, amountText, call, ok, message, events }) {
+  const seq = state.seq++;
+  const payload = `${seq}|${call}|${ok ? "ok" : `rejected:${message}`}`;
+  state.history.unshift({
+    seq,
+    hash: simHash(payload),
+    type,
+    actor,
+    campaignId,
+    campaignTitle,
+    amountText,
+    call,
+    ok,
+    message,
+    events: events ?? [],
+    epoch: state.epoch,
+  });
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = el("history");
+  list.innerHTML = "";
+  for (const entry of state.history) {
+    const row = document.createElement("li");
+    row.className = "hist-row";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `hist-entry ${entry.ok ? "hist-ok" : "hist-reject"}`;
+    button.dataset.seq = String(entry.seq);
+    button.setAttribute(
+      "aria-label",
+      `${entry.type} on ${entry.campaignTitle}, ${entry.ok ? "success" : "rejected"}, epoch ${entry.epoch}. Open block.`,
+    );
+
+    const main = document.createElement("span");
+    main.className = "hist-main";
+    const title = document.createElement("span");
+    title.className = "hist-title";
+    title.textContent = `${entry.type} · ${entry.campaignTitle}`;
+    const meta = document.createElement("span");
+    meta.className = "hist-meta";
+    meta.textContent = `${PERSONAS[entry.actor]?.name ?? entry.actor} · epoch ${entry.epoch} · `;
+    const hash = document.createElement("span");
+    hash.className = "hist-hash";
+    hash.textContent = shortHash(entry.hash);
+    meta.appendChild(hash);
+    main.appendChild(title);
+    main.appendChild(meta);
+    if (!entry.ok) {
+      const error = document.createElement("span");
+      error.className = "hist-error";
+      error.textContent = entry.message;
+      main.appendChild(error);
+    }
+
+    const side = document.createElement("span");
+    side.className = "hist-side";
+    const amount = document.createElement("span");
+    amount.className = "hist-amount";
+    amount.textContent = entry.ok ? entry.amountText : "Not committed";
+    const status = document.createElement("span");
+    status.className = "hist-status";
+    status.textContent = entry.ok ? "✓ Success" : "✗ Rejected";
+    side.appendChild(amount);
+    side.appendChild(status);
+
+    button.appendChild(main);
+    button.appendChild(side);
+    button.addEventListener("click", () => openBlock(entry.seq));
+    row.appendChild(button);
+    list.appendChild(row);
+  }
+}
+
+// --- Simulated block view -------------------------------------------------
+//
+// The epoch is the block-height analog: every entry recorded at the same
+// epoch belongs to the same simulated block. The block hash is derived
+// deterministically from the epoch and the block's transaction hashes, in
+// sequence order. The view is in-app only and labeled simulated.
+
+let blockReturnFocus = null;
+
+function blockHash(epoch, entries) {
+  const ordered = [...entries].sort((a, b) => a.seq - b.seq);
+  return simHash(`block:${epoch}:${ordered.map((e) => e.hash).join(",")}`);
+}
+
+function factRow(label, value, { mono = false, tone = null } = {}) {
+  const row = document.createElement("div");
+  row.className = "fact";
+  const dt = document.createElement("dt");
+  dt.textContent = label;
+  const dd = document.createElement("dd");
+  if (mono) dd.className = "mono";
+  if (tone) dd.classList.add(tone);
+  dd.textContent = value;
+  row.appendChild(dt);
+  row.appendChild(dd);
+  return row;
+}
+
+function renderBlockDetail(entry) {
+  const siblings = state.history.filter((e) => e.epoch === entry.epoch);
+  el("block-title").textContent = `Block — epoch ${entry.epoch}`;
+
+  const detail = el("block-detail");
+  detail.innerHTML = "";
+
+  const blockFacts = document.createElement("dl");
+  blockFacts.className = "block-facts";
+  blockFacts.appendChild(factRow("Block hash", blockHash(entry.epoch, siblings), { mono: true }));
+  blockFacts.appendChild(factRow("Epoch (block height)", String(entry.epoch)));
+  blockFacts.appendChild(factRow("Transactions in block", String(siblings.length)));
+  detail.appendChild(blockFacts);
+
+  const txHead = document.createElement("h3");
+  txHead.className = "block-sub";
+  txHead.textContent = "This transaction";
+  detail.appendChild(txHead);
+
+  const txFacts = document.createElement("dl");
+  txFacts.className = "block-facts";
+  txFacts.appendChild(factRow("Transaction hash", entry.hash, { mono: true }));
+  txFacts.appendChild(factRow("Type", entry.type));
+  txFacts.appendChild(factRow("Actor", PERSONAS[entry.actor]?.name ?? entry.actor));
+  txFacts.appendChild(factRow("Campaign", entry.campaignTitle));
+  txFacts.appendChild(factRow("Amount", entry.ok ? entry.amountText : "Not committed"));
+  txFacts.appendChild(
+    factRow("Status", entry.ok ? "Success" : `Rejected — ${entry.message}`, {
+      tone: entry.ok ? "ok" : "bad",
+    }),
+  );
+  detail.appendChild(txFacts);
+
+  const callHead = document.createElement("h3");
+  callHead.className = "block-sub";
+  callHead.textContent = "Template call";
+  detail.appendChild(callHead);
+  const call = document.createElement("pre");
+  call.className = "block-call";
+  call.textContent = entry.call;
+  detail.appendChild(call);
+
+  const effectsHead = document.createElement("h3");
+  effectsHead.className = "block-sub";
+  effectsHead.textContent = "Effects";
+  detail.appendChild(effectsHead);
+  if (entry.events.length > 0) {
+    const events = document.createElement("ul");
+    events.className = "block-events";
+    for (const event of entry.events) {
+      const li = document.createElement("li");
+      const topic = document.createElement("span");
+      topic.className = "ev-topic";
+      topic.textContent = event.topic;
+      li.appendChild(topic);
+      li.appendChild(document.createTextNode(` ${JSON.stringify(event.payload)}`));
+      events.appendChild(li);
+    }
+    detail.appendChild(events);
+  } else {
+    const none = document.createElement("p");
+    none.className = "muted small";
+    none.textContent = "No events — the call was rejected, nothing was committed.";
+    none.style.margin = "0";
+    detail.appendChild(none);
+  }
+
+  const sibHead = document.createElement("h3");
+  sibHead.className = "block-sub";
+  sibHead.textContent = "Other transactions in this block";
+  detail.appendChild(sibHead);
+  const others = siblings.filter((e) => e.seq !== entry.seq);
+  if (others.length === 0) {
+    const none = document.createElement("p");
+    none.className = "muted small";
+    none.textContent = "No other transactions in this block.";
+    none.style.margin = "0";
+    detail.appendChild(none);
+  } else {
+    const list = document.createElement("ul");
+    list.className = "sibling-list";
+    for (const other of others) {
+      const li = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "sibling-btn";
+      const label = document.createElement("span");
+      label.textContent = `${other.type} · ${other.campaignTitle}`;
+      const hash = document.createElement("span");
+      hash.className = "sib-hash";
+      hash.textContent = shortHash(other.hash);
+      button.appendChild(label);
+      button.appendChild(hash);
+      button.addEventListener("click", () => renderBlockDetail(other));
+      li.appendChild(button);
+      list.appendChild(li);
+    }
+    detail.appendChild(list);
+  }
+}
+
+function openBlock(seq) {
+  const entry = state.history.find((e) => e.seq === seq);
+  if (!entry) return;
+  blockReturnFocus = document.activeElement;
+  renderBlockDetail(entry);
+  el("block-modal").hidden = false;
+  document.body.classList.add("modal-open");
+  el("block-close").focus();
+}
+
+function closeBlock() {
+  if (el("block-modal").hidden) return;
+  el("block-modal").hidden = true;
+  document.body.classList.remove("modal-open");
+  if (blockReturnFocus && document.contains(blockReturnFocus)) {
+    blockReturnFocus.focus();
+  }
+  blockReturnFocus = null;
+}
+
+// --- Walkthrough + rendering (unchanged behavior) -------------------------
 
 function markStep(step) {
   if (state.progress[step]) return;
@@ -159,7 +405,11 @@ function render() {
     el(`balance-${id}`).textContent = formatAmount(balance);
   }
   document.querySelectorAll(".persona-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.persona === state.activePersona);
+    const active = btn.dataset.persona === state.activePersona;
+    btn.classList.toggle("active", active);
+    // Presentational/a11y only: expose the active signer to assistive tech.
+    if (active) btn.setAttribute("aria-current", "true");
+    else btn.removeAttribute("aria-current");
   });
 
   const grid = el("campaigns");
@@ -234,10 +484,6 @@ function findCampaign(id) {
   return state.campaigns.find((c) => c.id === id);
 }
 
-function describeEvents(events) {
-  return events.map((e) => `${e.topic} ${JSON.stringify(e.payload)}`).join("; ");
-}
-
 function doPledge(campaignId, rawAmount, showError) {
   const entry = findCampaign(campaignId);
   const persona = state.activePersona;
@@ -248,21 +494,28 @@ function doPledge(campaignId, rawAmount, showError) {
     showError(err.message);
     return;
   }
-  logCall(
-    `pledge(Bucket ${formatAmount(amount)} TARI) on “${entry.sim.title}” — signer: ${PERSONAS[persona].name}, epoch ${state.epoch}`,
-  );
+  const call =
+    `pledge(Bucket ${formatAmount(amount)} TARI) on “${entry.sim.title}” — signer: ${PERSONAS[persona].name}, epoch ${state.epoch}`;
   // Wallet-side check (mirrors the account withdraw in a real transaction):
   // the signer cannot pledge more demo units than their wallet holds.
   if (amount > state.wallets.get(persona)) {
     const message = "Insufficient demo balance — the wallet cannot withdraw more than it holds (wallet-side check, not a template rule).";
     showError(message);
-    logReject(message);
+    recordHistory({
+      type: "Pledge", actor: persona, campaignId, campaignTitle: entry.sim.title,
+      amountText: `+${formatAmount(amount)} TARI`, call, ok: false, message,
+    });
+    render();
     return;
   }
   try {
     const events = entry.sim.pledge(persona, amount, state.epoch);
     state.wallets.set(persona, state.wallets.get(persona) - amount);
-    logOk(`Pledged ${formatAmount(amount)} TARI. Events: ${describeEvents(events)}`);
+    recordHistory({
+      type: "Pledge", actor: persona, campaignId, campaignTitle: entry.sim.title,
+      amountText: `+${formatAmount(amount)} TARI`, call, ok: true,
+      message: `Pledged ${formatAmount(amount)} TARI`, events,
+    });
     if (campaignId === "c1" && persona === "bima") markStep("pledge-bima");
     if (campaignId === "c1" && events.some((e) => e.topic === "CrowdfundCampaign.Funded")) {
       markStep("pledge-sari");
@@ -270,7 +523,10 @@ function doPledge(campaignId, rawAmount, showError) {
     if (campaignId === "c2") markStep("pledge-mural");
   } catch (err) {
     showError(err.message);
-    logReject(err.message);
+    recordHistory({
+      type: "Pledge", actor: persona, campaignId, campaignTitle: entry.sim.title,
+      amountText: `+${formatAmount(amount)} TARI`, call, ok: false, message: err.message,
+    });
   }
   render();
 }
@@ -278,17 +534,23 @@ function doPledge(campaignId, rawAmount, showError) {
 function doClaim(campaignId, showError) {
   const entry = findCampaign(campaignId);
   const persona = state.activePersona;
-  logCall(
-    `claim() on “${entry.sim.title}” — signer: ${PERSONAS[persona].name}, epoch ${state.epoch}`,
-  );
+  const call =
+    `claim() on “${entry.sim.title}” — signer: ${PERSONAS[persona].name}, epoch ${state.epoch}`;
   try {
     const { amount, events } = entry.sim.claim(persona, state.epoch);
     state.wallets.set(persona, state.wallets.get(persona) + amount);
-    logOk(`Claimed ${formatAmount(amount)} TARI to ${PERSONAS[persona].name}. Events: ${describeEvents(events)}`);
+    recordHistory({
+      type: "Claim", actor: persona, campaignId, campaignTitle: entry.sim.title,
+      amountText: `+${formatAmount(amount)} TARI`, call, ok: true,
+      message: `Claimed ${formatAmount(amount)} TARI to ${PERSONAS[persona].name}`, events,
+    });
     if (campaignId === "c1") markStep("claim");
   } catch (err) {
     showError(err.message);
-    logReject(err.message);
+    recordHistory({
+      type: "Claim", actor: persona, campaignId, campaignTitle: entry.sim.title,
+      amountText: "", call, ok: false, message: err.message,
+    });
     if (err.message === "Campaign deadline has not been reached") markStep("early-claim");
   }
   render();
@@ -297,18 +559,24 @@ function doClaim(campaignId, showError) {
 function doRefund(campaignId, showError) {
   const entry = findCampaign(campaignId);
   const persona = state.activePersona;
-  logCall(
-    `refund() on “${entry.sim.title}” — signer: ${PERSONAS[persona].name}, epoch ${state.epoch}`,
-  );
+  const call =
+    `refund() on “${entry.sim.title}” — signer: ${PERSONAS[persona].name}, epoch ${state.epoch}`;
   try {
     const { amount, events } = entry.sim.refund(persona, state.epoch);
     state.wallets.set(persona, state.wallets.get(persona) + amount);
     state.refunded.add(`${campaignId}:${persona}`);
-    logOk(`Refunded ${formatAmount(amount)} TARI to ${PERSONAS[persona].name}. Events: ${describeEvents(events)}`);
+    recordHistory({
+      type: "Refund", actor: persona, campaignId, campaignTitle: entry.sim.title,
+      amountText: `+${formatAmount(amount)} TARI`, call, ok: true,
+      message: `Refunded ${formatAmount(amount)} TARI to ${PERSONAS[persona].name}`, events,
+    });
     if (campaignId === "c2") markStep("refund");
   } catch (err) {
     showError(err.message);
-    logReject(err.message);
+    recordHistory({
+      type: "Refund", actor: persona, campaignId, campaignTitle: entry.sim.title,
+      amountText: "", call, ok: false, message: err.message,
+    });
     // A "no pledge" rejection is a double-refund only if this persona already
     // refunded this campaign; otherwise they simply never pledged.
     if (
@@ -328,7 +596,8 @@ function doRefund(campaignId, showError) {
 
 function setEpoch(epoch) {
   state.epoch = epoch;
-  logCall(`Consensus epoch advanced to ${epoch} (demo time control — on-chain, epochs advance with consensus)`);
+  // Epoch advances are time control, not transactions: they move the demo
+  // to a new block height but record no history entry.
   if (epoch >= 5) markStep("advance");
   render();
 }
@@ -346,17 +615,25 @@ function init() {
   el("epoch-plus-1").addEventListener("click", () => setEpoch(state.epoch + 1));
   el("epoch-to-deadline").addEventListener("click", () => setEpoch(5));
   el("reset-demo").addEventListener("click", () => {
+    closeBlock();
     freshDemo();
-    el("log").innerHTML = "";
+    renderHistory();
     for (const step of WALKTHROUGH_STEPS) {
       document.querySelector(`[data-step="${step}"]`)?.classList.remove("done");
     }
     updateWalkthroughCount();
-    logCall("Demo reset: epoch 0, wallets restored, two fresh campaigns.");
     render();
   });
-  el("clear-log").addEventListener("click", () => {
-    el("log").innerHTML = "";
+  el("clear-history").addEventListener("click", () => {
+    state.history = [];
+    renderHistory();
+  });
+  el("block-close").addEventListener("click", closeBlock);
+  el("block-modal").addEventListener("click", (event) => {
+    if (event.target === el("block-modal")) closeBlock();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeBlock();
   });
   el("create-form").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -373,9 +650,8 @@ function init() {
     }
     const offset = Number(el("new-deadline").value);
     const deadlineEpoch = state.epoch + offset;
-    logCall(
-      `new("${title}", goal ${formatAmount(goal)}, deadline_epoch ${deadlineEpoch}) — signer: ${PERSONAS[state.activePersona].name}, epoch ${state.epoch}`,
-    );
+    const call =
+      `new("${title}", goal ${formatAmount(goal)}, deadline_epoch ${deadlineEpoch}) — signer: ${PERSONAS[state.activePersona].name}, epoch ${state.epoch}`;
     try {
       const sim = new CrowdfundSim({
         creator: state.activePersona,
@@ -384,20 +660,28 @@ function init() {
         deadlineEpoch,
         currentEpoch: state.epoch,
       });
-      state.campaigns.push({ id: `custom-${Date.now()}`, sim });
-      logOk(`Campaign “${title}” created. Events: ${describeEvents(sim.events)}`);
+      const id = `custom-${Date.now()}`;
+      state.campaigns.push({ id, sim });
+      recordHistory({
+        type: "Create", actor: state.activePersona, campaignId: id, campaignTitle: title,
+        amountText: `Goal ${formatAmount(goal)} TARI`, call, ok: true,
+        message: `Campaign “${title}” created`, events: sim.events,
+      });
       event.target.reset();
       el("new-deadline").value = "5";
     } catch (err) {
       errorBox.textContent = err.message;
       errorBox.hidden = false;
-      logReject(err.message);
+      recordHistory({
+        type: "Create", actor: state.activePersona, campaignId: "", campaignTitle: title,
+        amountText: `Goal ${formatAmount(goal)} TARI`, call, ok: false, message: err.message,
+      });
     }
     render();
   });
 
   el("live-status").textContent = liveStatus();
-  logCall("Demo loaded in simulation mode. No wallet connected, no network calls made.");
+  renderHistory();
   render();
 }
 

@@ -35,8 +35,15 @@ walkthrough checklist that ticks itself off:
 8. Refund again — rejected (double refund).
 9. Try refunding *Community radio* — rejected (refunds closed after success).
 
-The activity log maps every click to the template call it mirrors, and shows
-rejections with the exact message the template would panic with on-chain.
+The transaction **History** records every simulated action — create, pledge,
+claim, refund, and rejections — as one row with a deterministic simulated
+hash (an FNV-1a digest of the call data, so the same actions always yield
+the same hashes), type, actor, campaign, amount, epoch, and outcome.
+Selecting a row opens the simulated **block view**: the epoch as the
+block-height analog, the block hash derived from the block's transactions,
+the template call, its effects, and the other transactions in the same
+block. Both are labeled simulated everywhere — demo hashes, no real chain —
+and nothing links to a real explorer.
 
 ## The template
 
@@ -160,19 +167,23 @@ clean
 
 The demo page was also served locally (`python3 -m http.server`) and exercised
 end-to-end in headless Chromium with real clicks through the full 9-step
-walkthrough — 88 assertions covering step tracking and the progress counter,
+walkthrough — 160 assertions covering step tracking and the progress counter,
 exact rejection messages, wallet balances, the disabled time-travel button,
 reset, the never-pledged refund precision case, the create-campaign form
 (including its zero-goal rejection), pledge input validation, status-dot
 states, progress-bar values, the app-first section order, the collapsible
-walkthrough/limits sections, and layout checks (no horizontal overflow,
-card stacking, tap-target sizes) — in desktop (1280px) and mobile (390px)
-viewports, with zero console/page errors. All assertions passed. A separate
-contrast check verified 20 text/background pairs from the shipped CSS
-against WCAG AA (all ≥ 4.5:1). The UI was redesigned twice on 2026-11-15
-(same rules, same copy, same hooks; the second pass is an original light
-identity — bright paper, rust accent, grotesque display type); the harness
-was re-run against the redesigned bytes.
+walkthrough/limits sections, the splash screen, the section navigation and
+mobile menu, the entry cards, the Proof section, the transaction history
+(hash format, determinism across a reset, epoch grouping) and the block
+view (sibling navigation, close paths, focus return), and layout checks (no
+horizontal overflow, card stacking, tap-target sizes) — in desktop (1280px)
+and mobile (390px) viewports, with zero console/page errors. All assertions
+passed. A separate contrast check verified 41 text/background pairs from
+the shipped CSS against WCAG AA (all ≥ 4.5:1). The UI was redesigned three
+times on 2026-11-15 (same rules, same hooks; the third pass carries the
+official Tari identity, a splash screen, section navigation, entry cards,
+and the history/block view); the harness was re-run against the redesigned
+bytes after every pass.
 
 ## Project structure
 
@@ -185,13 +196,29 @@ tests/fixtures/test_token/  test-only template minting a non-TARI token, so
                       published, never part of the submission template
 template.toml         template metadata
 app/
-  index.html          demo page (simulation-first, judge walkthrough)
-  app.js              demo harness: wallets, epoch control, log, checklist
+  index.html          demo page: splash, navigation, entry cards, workspace,
+                      campaigns, history + block view, About, Proof,
+                      walkthrough, honest limits
+  app.js              demo harness: wallets, epoch control, transaction
+                      history + block view, checklist
   sim.js              faithful simulation of the template state machine
   sim.test.mjs        parity tests: sim vs template rules
   live.js             live-mode STUB: wallet detection + honest status only
   style.css
+  tari-mark.svg       official Tari gem mark, vendored (see Brand assets)
 LICENSE               MIT
+
+## Brand assets
+
+The Tari gem mark used in the splash screen and the top-bar lockup is the
+official Tari design mark: the path data is copied verbatim and unaltered
+from the wordmark SVG served by tari.com itself, and the violet (`#813BF5`)
+and lime (`#c2ff28` on violet-black `#160c25`) come from tari.com and the
+Ootle docs (ootle.tari.com). No public brand kit exists — the live site's
+inline SVG is the authoritative current vector asset. Use is descriptive
+only ("Built on Tari Ootle"): the mark is never altered and never presented
+as this project's own logo. Full source notes live in the `tari-mark.svg`
+file header. The layout, copy, and composition of the demo are original.
 SUBMISSION.md         draft contest submission text (links TBD)
 ```
 

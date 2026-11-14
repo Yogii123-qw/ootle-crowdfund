@@ -1,0 +1,23 @@
+<!-- Tari "T" gem/design mark — OFFICIAL asset, geometry verbatim and unaltered.
+Source: the inline wordmark SVG served by https://www.tari.com/ itself
+(viewBox "0 0 121 38", header + footer, fetched 2026-11-15). This file
+keeps only the gem portion (x 0–37.05) of that wordmark; the path data
+below is copied character-for-character from Tari's production SVG.
+Fill is Tari violet #813BF5 as used on tari.com; the mark is also
+rendered in Tari lime #c2ff28 on Tari violet-black #160c25 in the page
+header and favicon, matching tari.com/favicon.png (measured from the
+official file). No public Tari brand kit, logo SVG file, or press page
+exists: tari.com/brand, /press, and /media-kit all 404, and no logo SVG
+exists in the public tari-project GitHub org (tari-website repo holds
+only the old site's favicon.ico; the tari repo holds only ASCII art, .ico
+files, and a small grayscale docs PNG). The live site's own SVG is the
+authoritative current vector asset.
+
+"Tari" and the "T" design mark are trademarks of Tari Labs (see the Tari
+Trademark and Brand Policy, community.tari.com). Used here descriptively
+only — "Built on Tari Ootle" — for an entry in Tari's own November Build
+Contest. The mark is never altered in geometry and never presented as
+this project's own logo. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37.05 38">
+  <path d="M0 10.2215V20.6884L15.321 37.7961L37.0481 20.7502V10.2124L15.3902 0.203934L0 10.2215ZM13.4816 30.1765L3.71336 19.2693V13.3381L13.4816 15.8506V30.1765ZM17.195 31.6065V16.804L31.4044 20.4591L17.195 31.6065ZM33.3366 12.5848V17.1224L6.72081 10.2779L15.6958 4.43582L33.3348 12.5867L33.3366 12.5848Z" fill="#813bf5"/>
+</svg>
