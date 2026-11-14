@@ -527,6 +527,54 @@ fn refund_before_deadline_is_rejected() {
 }
 
 #[test]
+fn pledge_after_claim_is_rejected() {
+    let mut test = TemplateTest::my_crate();
+    let creator = new_actor(&mut test);
+    let backer = new_actor(&mut test);
+    let campaign = create_campaign(&mut test, &creator, "Claimed", 100, 10);
+    pledge(&mut test, campaign, &backer, 100);
+    set_epoch(&mut test, 10);
+    claim(&mut test, campaign, &creator);
+
+    // Rewind the epoch below the deadline. Only the harness epoch override
+    // can do this — on-chain epochs never go backward, so this path is a
+    // defensive guard in production. The rewind makes the deadline check
+    // pass, so the already-claimed check must be the one that fires.
+    set_epoch(&mut test, 5);
+    let reason = test.execute_expect_failure(
+        test.transaction()
+            .call_method(backer.account, "withdraw", args![TARI_TOKEN, 10])
+            .put_last_instruction_output_on_workspace("funds")
+            .call_method(campaign, "pledge", args![Workspace("funds")])
+            .build_and_seal(&backer.key),
+        vec![backer.proof.clone()],
+    );
+    assert_reject_reason(reason, "Campaign funds have already been claimed");
+    assert_eq!(
+        test.call_method::<Amount>(campaign, "total_pledged", args![], vec![]),
+        Amount::from(0u64)
+    );
+}
+
+#[test]
+fn zero_amount_pledge_is_rejected() {
+    let mut test = TemplateTest::my_crate();
+    let creator = new_actor(&mut test);
+    let backer = new_actor(&mut test);
+    let campaign = create_campaign(&mut test, &creator, "Zero pledge", 100, 10);
+
+    let reason = test.execute_expect_failure(
+        test.transaction()
+            .call_method(backer.account, "withdraw", args![TARI_TOKEN, 0])
+            .put_last_instruction_output_on_workspace("funds")
+            .call_method(campaign, "pledge", args![Workspace("funds")])
+            .build_and_seal(&backer.key),
+        vec![backer.proof.clone()],
+    );
+    assert_reject_reason(reason, "Pledge must be greater than zero");
+}
+
+#[test]
 fn pledge_with_non_tari_token_is_rejected() {
     // This test loads a second, test-only template (tests/fixtures/test_token)
     // whose `mint` function creates a fresh public fungible token. Paying the
